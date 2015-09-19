@@ -1,14 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
+<style>
 
+.bar {
+  fill: steelblue;
+}
+
+.bar:hover {
+  fill: brown;
+}
+
+.axis {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
+
+</style>
 <head>
 	<meta charset="utf-8" />
 	<title>D3 Budget</title>
 </head>
-<script src="require.js" ></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
-<script src="Main.js" ></script>
-
+<script data-main="main" src="require.js"></script>
 <body>
 </body>
 

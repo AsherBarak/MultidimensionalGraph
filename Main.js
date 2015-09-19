@@ -1,15 +1,13 @@
-var a_1 = require("./a");
-var Main = (function () {
-    function Main() {
-    }
-    Main.prototype.Run = function () {
-        alert("hi");
-        var a = new a_1.A();
-        a.Hi();
-    };
-    return Main;
-})();
-alert("entering");
-var main = new Main();
-main.Run();
+define(["require", "exports", "./D3Painter", "DataAccess/DataProvider"], function (require, exports, NS, DataProvider_1) {
+    var Program = (function () {
+        function Program() {
+        }
+        Program.main = function () {
+            var painter = new NS.Painter();
+            painter.paint(new DataProvider_1.BudgetData());
+        };
+        return Program;
+    })();
+    Program.main();
+});
 //# sourceMappingURL=Main.js.map

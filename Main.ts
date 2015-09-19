@@ -1,13 +1,11 @@
-import {A} from "./a";
+import * as NS from "./D3Painter";
+import {BudgetData} from "DataAccess/DataProvider"
 
-	class Main {
-		Run() {
-			alert("hi");
-			var a=new A();
-			a.Hi();
-		}
+class Program {
+	static main() {
+		var painter = new NS.Painter();
+		painter.paint(new BudgetData());
 	}
+}
 
-alert("entering");
-var main = new Main()
-main.Run();
+Program.main();
