@@ -2,7 +2,7 @@ define(["require", "exports"], function (require, exports) {
     var Painter = (function () {
         function Painter() {
         }
-        Painter.prototype.paint = function (data) {
+        Painter.paint = function (data) {
             console.log("IN PAINT!");
             var margin = { top: 20, right: 20, bottom: 30, left: 40 }, width = 960 - margin.left - margin.right, height = 500 - margin.top - margin.bottom;
             var x = d3.scale.ordinal()
@@ -15,17 +15,19 @@ define(["require", "exports"], function (require, exports) {
             var yAxis = d3.svg.axis()
                 .scale(y)
                 .orient("left")
-                .ticks(10, "%");
+                .ticks(10);
             var svg = d3.select("body").append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
                 .append("g")
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-            var data1 = [{ letter: "A", frequency: 0.2 }, { letter: "B", frequency: 0.25 }];
-            //	d3.tsv("data.tsv", type, function(error, data) {
-            //		if (error) throw error;
-            x.domain(data1.map(function (d) { return d.letter; }));
-            y.domain([0, d3.max(data1, function (d) { return d.frequency; })]);
+            var data1 = [
+                { letter: "A", frequency: 0.2 },
+                { letter: "C", frequency: 0.8 },
+                { letter: "B", frequency: 0.25 }
+            ];
+            x.domain(data.items.map(function (d) { return d.text; }));
+            y.domain([0, d3.max(data.items, function (d) { return d.budget; })]);
             svg.append("g")
                 .attr("class", "x axis")
                 .attr("transform", "translate(0," + height + ")")
@@ -39,19 +41,42 @@ define(["require", "exports"], function (require, exports) {
                 .attr("dy", ".71em")
                 .style("text-anchor", "end")
                 .text("Frequency");
-            svg.selectAll(".bar")
-                .data(data1)
-                .enter().append("rect")
-                .attr("class", "bar")
-                .attr("x", function (d) { return x(d.letter); })
-                .attr("width", x.rangeBand())
-                .attr("y", function (d) { return y(d.frequency); })
-                .attr("height", function (d) { return height - y(d.frequency); });
-            //	});
+            /*
+                    svg.selectAll(".budgetBar")
+                        .data<BudgetDataItem>(data.items)
+                        .enter().append("rect")
+                        .attr("class", "budgetBar")
+                        .attr("x", function(d) { return x(d.text); })
+                        .attr("width", x.rangeBand()/2)
+                        .attr("y", function(d) { return y(d.budget); })
+                        .attr("height", function(d) { return height - y(d.budget); });
+            
+                    svg.selectAll(".planningBar")
+                        .data<BudgetDataItem>(data.items)
+                        .enter().append("rect")
+                        .attr("class", "planningBar")
+                        .attr("x", function(d) { return x(d.text)+x.rangeBand()/2; })
+                        .attr("width", x.rangeBand()/2)
+                        .attr("y", function(d) { return y(d.planning); })
+                        .attr("height", function(d) { return height - y(d.planning); });
+            */
+            Painter.drawBar("budgetBar", svg, data, x, y, height, function (item) { return item.budget; }, 0, 3);
+            Painter.drawBar("planningBar", svg, data, x, y, height, function (item) { return item.planning; }, 1, 3);
+            Painter.drawBar("consumptionBar", svg, data, x, y, height, function (item) { return item.actualConsumption; }, 2, 3);
             function type(d) {
                 d.frequency = +d.frequency;
                 return d;
             }
+        };
+        Painter.drawBar = function (className, svg, data, x, y, height, dataSelector, barIndex, numberOfColumns) {
+            svg.selectAll("." + className)
+                .data(data.items)
+                .enter().append("rect")
+                .attr("class", className)
+                .attr("x", function (d) { return x(d.text) + x.rangeBand() / numberOfColumns * barIndex; })
+                .attr("width", x.rangeBand() / numberOfColumns)
+                .attr("y", function (d) { return y(dataSelector(d)); })
+                .attr("height", function (d) { return height - y(dataSelector(d)); });
         };
         return Painter;
     })();

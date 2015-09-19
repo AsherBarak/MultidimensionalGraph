@@ -1,10 +1,12 @@
-import * as NS from "./D3Painter";
+import {Painter} from "./D3Painter";
 import {BudgetData} from "DataAccess/DataProvider"
+import {MockDataAccess} from "DataAccess/DataProvider"
+import { BudgetDataRequestParams} from "DataAccess/DataProvider"
 
 class Program {
 	static main() {
-		var painter = new NS.Painter();
-		painter.paint(new BudgetData());
+		var dataAccess=new MockDataAccess();
+		Painter.paint(dataAccess.getData({}));
 	}
 }
 
