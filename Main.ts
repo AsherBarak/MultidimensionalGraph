@@ -1,18 +1,10 @@
-/// <reference path="D3Painter.ts" />
-/// <reference path="DataAccess\DataProvider.ts" />
-import {BudgetData} from "./DataAccess/DataProvider";
-import {Painter} from "./D3Painter";
-
-//import Painter =require("D3Painter");
-//import BudgetData=require("DataAccess/DataProvider");
-
+import {A} from "./a";
 
 	class Main {
 		Run() {
 			alert("hi");
-			var p= new Painter(); 
-			p.paint(new BudgetData());
-			
+			var a=new A();
+			a.Hi();
 		}
 	}
 
