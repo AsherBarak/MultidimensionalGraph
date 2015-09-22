@@ -33,13 +33,6 @@ export class Painter {
 			.append("g")
 			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-		var data1: DataElement[] = [
-			{ letter: "A", frequency: 0.2 },
-			{ letter: "C", frequency: 0.8 },
-			{ letter: "B", frequency: 0.25 }
-		];
-
-
 		x.domain(data.items.map(function(d) { return d.text; }));
 		y.domain([0, d3.max<BudgetDataItem>(data.items, function(d) { return d.budget; })]);
 
