@@ -22,6 +22,7 @@ class SegmentDescription {
 	cssClass: string;
 	displayName: string;
 	description: string;
+	parentSegmentsIds: string[];
 }
 
 /** 
@@ -86,16 +87,17 @@ class TimelineDataItem {
 
 class TimelineData extends RetrivedData {
 	data: TimelineDataItem[];
-}		
+}
 
 
-class Painter
-{
-	setup(seriesDescriptions:SeriesDescription[],segmentDescriptions:SegmentDescription[]){
-		
+class Painter {
+	setup(
+		seriesDescriptions: SeriesDescription[],
+		segmentDescriptions: SegmentDescription[]) {
+
 	}
-	
-	draw(){
+
+	draw(data: SegmentsData) {
 		
 	}
 }
