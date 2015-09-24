@@ -112,19 +112,19 @@ export class Painter {
 		var svg = d3.select("body").select(".budgetPlot");
 		//.attr("width", width + margin.left + margin.right)
 		//.attr("height", height + margin.top + margin.bottom)
-		var mainG=svg.append("g")
+		var mainG = svg.append("g")
 			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 
 		var width = +svg.attr("width") - margin.left - margin.right,
 			height = +svg.attr("height") - margin.top - margin.bottom;
 
-		d3.behavior.zoom().scaleExtent([0.1, 3]).on("zoom",()=>
-		
-		
-		mainG.attr("transform", "translate(" + (<any>d3.event).translate + ")scale(" + (<any>d3.event).scale + ")")
-		
-		)
+		var zoom=d3.behavior.zoom().scaleExtent([0.1, 3]).on("zoom", () =>
+
+
+			mainG.attr("transform", "translate(" + (<any>d3.event).translate + ")scale(" + (<any>d3.event).scale + ")")
+
+			)
 
 		var x = d3.scale.ordinal()
 			.rangeRoundBands([0, width], .1);
@@ -135,6 +135,8 @@ export class Painter {
 		var xAxis = d3.svg.axis()
 			.scale(x)
 			.orient("bottom");
+
+
 
 		var yAxis = d3.svg.axis()
 			.scale(y)
@@ -151,8 +153,22 @@ export class Painter {
 
 		var itemsPerSegment = d3.max(data.segments.map(seg=> seg.dataItems.length));
 
-		x.domain(data.segments.map(d=>this.getSegmentValueId(d.segment)));
+		x.domain(data.segments.map(d=> this.getSegmentValueId(d.segment)));
 		y.domain([0, maxValue]);
+
+		var self = this;
+		//xAxis.tickFormat(segKey=>    segKey+"!!!");
+		xAxis.tickFormat(function(segKey): string {
+			var length = data.segments.length;
+			for (var index = 0; index < length; index++) {
+				var element = data.segments[index];
+				if (self.getSegmentValueId(element.segment) == segKey) {
+					return element.segment.displayName;
+				}
+			}
+			return "err";
+		}
+			);
 
 		mainG.append("g")
 			.attr("class", "x axis")
@@ -184,17 +200,17 @@ export class Painter {
 			.enter()
 			.append("rect")
 			.attr("class", itm=> this.getSeries(itm.dataItem.seriesId).cssClass)
-			.attr("x", (itm, i) => x(itm.segment.segment.displayName) + i * x.rangeBand() / itemsPerSegment)
+			.attr("x", (itm, i) => x(this.getSegmentValueId(itm.segment.segment)) + i * x.rangeBand() / itemsPerSegment)
 			.attr("width", itm=> x.rangeBand() / itemsPerSegment)
 			.attr("y", itm=> y(itm.dataItem.value))
 			.attr("data-ziv-val", itm=> itm.dataItem.value)
-			.attr("height", itm=> height - y(itm.dataItem.value));
+			.attr("height", itm=> height - y(itm.dataItem.value)).call(zoom);
 	}
-	
-	private zoom(container:any){
+
+	private zoom(container: any) {
 		container.attr("transform", "translate(" + (<any>d3.event).translate + ")scale(" + (<any>d3.event).scale + ")");
 	}
-	
+
 
 	private getSegmentValueId(segment: SegmentValue): string {
 		return segment.segmentId + "_" + segment.valueId

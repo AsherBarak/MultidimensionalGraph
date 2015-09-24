@@ -99,7 +99,7 @@ define(["require", "exports"], function (require, exports) {
             var mainG = svg.append("g")
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
             var width = +svg.attr("width") - margin.left - margin.right, height = +svg.attr("height") - margin.top - margin.bottom;
-            d3.behavior.zoom().scaleExtent([0.1, 3]).on("zoom", function () {
+            var zoom = d3.behavior.zoom().scaleExtent([0.1, 3]).on("zoom", function () {
                 return mainG.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
             });
             var x = d3.scale.ordinal()
@@ -116,6 +116,18 @@ define(["require", "exports"], function (require, exports) {
             var itemsPerSegment = d3.max(data.segments.map(function (seg) { return seg.dataItems.length; }));
             x.domain(data.segments.map(function (d) { return _this.getSegmentValueId(d.segment); }));
             y.domain([0, maxValue]);
+            var self = this;
+            //xAxis.tickFormat(segKey=>    segKey+"!!!");
+            xAxis.tickFormat(function (segKey) {
+                var length = data.segments.length;
+                for (var index = 0; index < length; index++) {
+                    var element = data.segments[index];
+                    if (self.getSegmentValueId(element.segment) == segKey) {
+                        return element.segment.displayName;
+                    }
+                }
+                return "err";
+            });
             mainG.append("g")
                 .attr("class", "x axis")
                 .attr("transform", "translate(0," + height + ")")
@@ -139,11 +151,11 @@ define(["require", "exports"], function (require, exports) {
                 .enter()
                 .append("rect")
                 .attr("class", function (itm) { return _this.getSeries(itm.dataItem.seriesId).cssClass; })
-                .attr("x", function (itm, i) { return x(itm.segment.segment.displayName) + i * x.rangeBand() / itemsPerSegment; })
+                .attr("x", function (itm, i) { return x(_this.getSegmentValueId(itm.segment.segment)) + i * x.rangeBand() / itemsPerSegment; })
                 .attr("width", function (itm) { return x.rangeBand() / itemsPerSegment; })
                 .attr("y", function (itm) { return y(itm.dataItem.value); })
                 .attr("data-ziv-val", function (itm) { return itm.dataItem.value; })
-                .attr("height", function (itm) { return height - y(itm.dataItem.value); });
+                .attr("height", function (itm) { return height - y(itm.dataItem.value); }).call(zoom);
         };
         Painter.prototype.zoom = function (container) {
             container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
