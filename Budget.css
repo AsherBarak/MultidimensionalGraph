@@ -7,3 +7,8 @@
 	{
 		fill: cornflowerblue;
 	}
+	
+	.overlay {
+  fill: none;
+  pointer-events: all;
+}

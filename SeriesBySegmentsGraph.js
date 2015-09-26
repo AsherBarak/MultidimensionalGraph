@@ -86,6 +86,8 @@ define(["require", "exports"], function (require, exports) {
     exports.TimelineData = TimelineData;
     var Painter = (function () {
         function Painter() {
+            this.STRTUP_BAR_WIDTH = 35;
+            this.MARGIN_BETWEEN_BAR_GROUPS = 0.1;
         }
         Painter.prototype.setup = function (seriesDescriptions, segmentDescriptions, data) {
             var _this = this;
@@ -94,16 +96,20 @@ define(["require", "exports"], function (require, exports) {
             var margin = { top: 20, right: 20, bottom: 30, left: 40 };
             // redaraw from here?
             var svg = d3.select("body").select(".budgetPlot");
+            var overlay = svg.append("rect")
+                .attr("class", "overlay")
+                .attr("width", width)
+                .attr("height", height);
             //.attr("width", width + margin.left + margin.right)
             //.attr("height", height + margin.top + margin.bottom)
             var mainG = svg.append("g")
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
             var width = +svg.attr("width") - margin.left - margin.right, height = +svg.attr("height") - margin.top - margin.bottom;
-            var zoom = d3.behavior.zoom().scaleExtent([0.1, 3]).on("zoom", function () {
-                return mainG.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-            });
+            var itemsPerSegment = d3.max(data.segments.map(function (seg) { return seg.dataItems.length; }));
+            var startupSegmentWidth = itemsPerSegment * this.STRTUP_BAR_WIDTH * (1 + 2 * this.MARGIN_BETWEEN_BAR_GROUPS);
+            var widthOfAllData = startupSegmentWidth * data.segments.length;
             var x = d3.scale.ordinal()
-                .rangeRoundBands([0, width], .1);
+                .rangeRoundBands([0, widthOfAllData], this.MARGIN_BETWEEN_BAR_GROUPS);
             var y = d3.scale.linear()
                 .range([height, 0]);
             var xAxis = d3.svg.axis()
@@ -113,7 +119,6 @@ define(["require", "exports"], function (require, exports) {
                 .scale(y)
                 .orient("left");
             var maxValue = d3.max(data.segments.map(function (seg) { return d3.max(seg.dataItems.map(function (itm) { return itm.value; })); }));
-            var itemsPerSegment = d3.max(data.segments.map(function (seg) { return seg.dataItems.length; }));
             x.domain(data.segments.map(function (d) { return _this.getSegmentValueId(d.segment); }));
             y.domain([0, maxValue]);
             var self = this;
@@ -128,11 +133,13 @@ define(["require", "exports"], function (require, exports) {
                 }
                 return "err";
             });
-            mainG.append("g")
+            var xAxisGroupContainer = mainG.append("g")
+                .attr("clip-path", "url(#x-clip-path)");
+            xAxisGroupContainer.append("g")
                 .attr("class", "x axis")
                 .attr("transform", "translate(0," + height + ")")
                 .call(xAxis);
-            mainG.append("g")
+            var yAxisGroup = mainG.append("g")
                 .attr("class", "y axis")
                 .call(yAxis)
                 .append("text")
@@ -141,11 +148,41 @@ define(["require", "exports"], function (require, exports) {
                 .attr("dy", ".71em")
                 .style("text-anchor", "end")
                 .text(data.yAxisDisplayName);
-            var segments = mainG.selectAll(".segment")
+            //Add a "defs" element to the svg
+            var defs = svg.append("defs");
+            //Append a clipPath element to the defs element, and a Shape
+            // to define the cliping area
+            defs.append("clipPath").attr('id', 'content-clip-path').append('rect')
+                .attr('width', width) //Set the width of the clipping area
+                .attr("x", +yAxisGroup.attr("width"))
+                .attr('height', height); // set the height of the clipping area
+            //clip path for x axis
+            defs.append("clipPath").attr('id', 'x-clip-path').append('rect')
+                .attr('width', width) //Set the width of the clipping area
+                .attr('height', height + margin.bottom); // set the height of the clipping area
+            var contentG = mainG.append("g");
+            contentG.attr("clip-path", "url(#content-clip-path)");
+            var segments = contentG.selectAll(".segment")
                 .data(data.segments, function (seg) { return _this.getSegmentValueId(seg.segment); });
-            segments.enter()
+            var segmentGroups = segments.enter()
                 .append("g")
                 .attr("class", "segment");
+            var zoom = d3.behavior.zoom().scaleExtent([width / widthOfAllData, width / (startupSegmentWidth * 2)]).on("zoom", function () {
+                var scale = d3.event.scale;
+                var translateX = d3.event.translate[0];
+                var translateY = d3.event.translate[1];
+                // Prevent data from moving away from y axis:
+                translateX = translateX > 0 ? 0 : translateX;
+                var maxTranslateX = widthOfAllData * scale - width;
+                translateX = translateX < (-maxTranslateX) ? (-maxTranslateX) : translateX;
+                segmentGroups.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)");
+                svg.select(".x.axis")
+                    .attr("transform", "translate(" + translateX + "," + (height) + ")")
+                    .call(xAxis.scale(x.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
+                //svg.select(".y.axis").call(yAxis);
+            });
+            var tooltip = d3.tip();
+            tooltip.html(function (d) { return d.dataItem.seriesId; });
             segments.selectAll("rect")
                 .data(function (sdi) { return sdi.dataItems.map(function (dataItem) { return { dataItem: dataItem, segment: sdi }; }); }, function (itm) { return _this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId; })
                 .enter()
@@ -155,10 +192,11 @@ define(["require", "exports"], function (require, exports) {
                 .attr("width", function (itm) { return x.rangeBand() / itemsPerSegment; })
                 .attr("y", function (itm) { return y(itm.dataItem.value); })
                 .attr("data-ziv-val", function (itm) { return itm.dataItem.value; })
-                .attr("height", function (itm) { return height - y(itm.dataItem.value); }).call(zoom);
-        };
-        Painter.prototype.zoom = function (container) {
-            container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+                .attr("height", function (itm) { return height - y(itm.dataItem.value); })
+                .call(tooltip)
+                .on('mouseover', tooltip.show)
+                .on('mouseout', tooltip.hide);
+            svg.call(zoom);
         };
         Painter.prototype.getSegmentValueId = function (segment) {
             return segment.segmentId + "_" + segment.valueId;

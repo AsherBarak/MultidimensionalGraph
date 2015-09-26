@@ -92,7 +92,8 @@ export class TimelineData extends RetrivedData {
 
 
 export class Painter {
-
+	private STRTUP_BAR_WIDTH: number = 35;
+	private MARGIN_BETWEEN_BAR_GROUPS: number = 0.1;
 
 	private _seriesDescriptions: SeriesDescription[];
 	private _segmentDescriptions: SegmentDescription[];
@@ -110,24 +111,28 @@ export class Painter {
 
 		// redaraw from here?
 		var svg = d3.select("body").select(".budgetPlot");
+
+		var overlay = svg.append("rect")
+			.attr("class", "overlay")
+			.attr("width", width)
+			.attr("height", height);
+		
 		//.attr("width", width + margin.left + margin.right)
 		//.attr("height", height + margin.top + margin.bottom)
 		var mainG = svg.append("g")
 			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-
 		var width = +svg.attr("width") - margin.left - margin.right,
 			height = +svg.attr("height") - margin.top - margin.bottom;
 
-		var zoom=d3.behavior.zoom().scaleExtent([0.1, 3]).on("zoom", () =>
+		var itemsPerSegment = d3.max(data.segments.map(seg=> seg.dataItems.length));
 
+		var startupSegmentWidth = itemsPerSegment * this.STRTUP_BAR_WIDTH * (1 + 2 * this.MARGIN_BETWEEN_BAR_GROUPS);
 
-			mainG.attr("transform", "translate(" + (<any>d3.event).translate + ")scale(" + (<any>d3.event).scale + ")")
-
-			)
+		var widthOfAllData = startupSegmentWidth * data.segments.length;
 
 		var x = d3.scale.ordinal()
-			.rangeRoundBands([0, width], .1);
+			.rangeRoundBands([0, widthOfAllData], this.MARGIN_BETWEEN_BAR_GROUPS);
 
 		var y = d3.scale.linear()
 			.range([height, 0]);
@@ -135,8 +140,6 @@ export class Painter {
 		var xAxis = d3.svg.axis()
 			.scale(x)
 			.orient("bottom");
-
-
 
 		var yAxis = d3.svg.axis()
 			.scale(y)
@@ -151,10 +154,11 @@ export class Painter {
 				{ return d3.max(seg.dataItems.map(itm=> itm.value)); }
 					));
 
-		var itemsPerSegment = d3.max(data.segments.map(seg=> seg.dataItems.length));
+
 
 		x.domain(data.segments.map(d=> this.getSegmentValueId(d.segment)));
 		y.domain([0, maxValue]);
+
 
 		var self = this;
 		//xAxis.tickFormat(segKey=>    segKey+"!!!");
@@ -170,12 +174,15 @@ export class Painter {
 		}
 			);
 
-		mainG.append("g")
+		var xAxisGroupContainer = mainG.append("g")
+			.attr("clip-path", "url(#x-clip-path)");
+
+		xAxisGroupContainer.append("g")
 			.attr("class", "x axis")
 			.attr("transform", "translate(0," + height + ")")
 			.call(xAxis);
 
-		mainG.append("g")
+		var yAxisGroup = mainG.append("g")
 			.attr("class", "y axis")
 			.call(yAxis)
 			.append("text")
@@ -184,14 +191,57 @@ export class Painter {
 			.attr("dy", ".71em")
 			.style("text-anchor", "end")
 			.text(data.yAxisDisplayName);
+			
+					
+		//Add a "defs" element to the svg
+		var defs = svg.append("defs");
+
+		//Append a clipPath element to the defs element, and a Shape
+		// to define the cliping area
+		defs.append("clipPath").attr('id', 'content-clip-path').append('rect')
+			.attr('width', width) //Set the width of the clipping area
+			.attr("x", +yAxisGroup.attr("width"))
+			.attr('height', height); // set the height of the clipping area
+
+		//clip path for x axis
+		defs.append("clipPath").attr('id', 'x-clip-path').append('rect')
+			.attr('width', width) //Set the width of the clipping area
+			.attr('height', height + margin.bottom); // set the height of the clipping area
 
 
-		var segments = mainG.selectAll(".segment")
+		var contentG = mainG.append("g");
+		contentG.attr("clip-path", "url(#content-clip-path)");
+
+
+		var segments = contentG.selectAll(".segment")
 			.data(data.segments, seg=> this.getSegmentValueId(seg.segment));
 
-		segments.enter()
+		var segmentGroups = segments.enter()
 			.append("g")
 			.attr("class", "segment");
+
+		var zoom = d3.behavior.zoom().scaleExtent([width / widthOfAllData, width / (startupSegmentWidth * 2)]).on("zoom", () => {
+			var scale = (<any>d3.event).scale;
+			var translateX: number = (<any>d3.event).translate[0];
+			var translateY: number = (<any>d3.event).translate[1];
+			// Prevent data from moving away from y axis:
+			translateX = translateX > 0 ? 0 : translateX;
+			var maxTranslateX = widthOfAllData * scale - width;
+			translateX = translateX < (-maxTranslateX) ? (-maxTranslateX) : translateX;
+
+
+			segmentGroups.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)")
+
+			svg.select(".x.axis")
+				.attr("transform", "translate(" + translateX + "," + (height) + ")")
+				.call(xAxis.scale(x.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
+
+			//svg.select(".y.axis").call(yAxis);
+		});
+		
+		var tooltip=d3.tip<fullDataItem>();
+		
+		tooltip.html(d=>d.dataItem.seriesId);
 
 		segments.selectAll("rect")
 			.data(
@@ -204,13 +254,15 @@ export class Painter {
 			.attr("width", itm=> x.rangeBand() / itemsPerSegment)
 			.attr("y", itm=> y(itm.dataItem.value))
 			.attr("data-ziv-val", itm=> itm.dataItem.value)
-			.attr("height", itm=> height - y(itm.dataItem.value)).call(zoom);
+			.attr("height", itm=> height - y(itm.dataItem.value))
+			.call(tooltip)
+			  .on('mouseover', tooltip.show)
+  .on('mouseout', tooltip.hide)
+			;
+			
+		svg.call(zoom);
 	}
-
-	private zoom(container: any) {
-		container.attr("transform", "translate(" + (<any>d3.event).translate + ")scale(" + (<any>d3.event).scale + ")");
-	}
-
+	
 
 	private getSegmentValueId(segment: SegmentValue): string {
 		return segment.segmentId + "_" + segment.valueId
@@ -237,3 +289,10 @@ export class Painter {
 		return null;
 	}
 }
+
+
+	interface fullDataItem
+	{
+		dataItem: DataItem,
+		segment: SegmentDataItems
+	}
