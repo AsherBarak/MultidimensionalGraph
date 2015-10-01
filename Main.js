@@ -221,7 +221,7 @@ define(["require", "exports", "SeriesBySegmentsGraph"], function (require, expor
                 ]
             };
             var painter = new SeriesBySegment.Painter();
-            painter.setup(seriesDescriptions, segmentDescriptions, data);
+            painter.setup(seriesDescriptions, segmentDescriptions, data, null, "#budgetPlot");
         };
         return Program;
     })();

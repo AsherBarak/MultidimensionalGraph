@@ -234,7 +234,9 @@ class Program {
 		painter.setup(
 			seriesDescriptions,
 			segmentDescriptions,
-			data);
+			data,
+			null,
+			"#budgetPlot");
 	}
 }
 

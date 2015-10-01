@@ -97,56 +97,121 @@ export class Painter {
 
 	private _seriesDescriptions: SeriesDescription[];
 	private _segmentDescriptions: SegmentDescription[];
+	private _chartUniqueSuffix: string;
+
+	private _chartContainer: string;
+	private _xScale: d3.scale.Ordinal<string, number>;
+	private _yScale: d3.scale.Linear<number, number>;
+	private _xAxis: d3.svg.Axis;
+	private _yAxis: d3.svg.Axis;
+	private _tooltip: d3.Tip<fullDataItem>;
 
 	setup(
 		seriesDescriptions: SeriesDescription[],
 		segmentDescriptions: SegmentDescription[],
-		data: SegmentsData) {
+		data: SegmentsData,
+		dataCallback: (SegmentdRequestParams) => SegmentsData,
+		/**
+		 * Search string for the page element to contain the chart:
+		 * @example
+		 * "#elmentId",".elementCalss","body"
+		 */
+		chartContainer: string,
+		startFilters: SegmentValueForDisplay[] = null,
+		/**
+		 * When using more than one chart in a single page this value is appende to elements unique id's 
+		 */
+		chartUniqueSuffix: string = "") {
 		this._seriesDescriptions = seriesDescriptions;
 		this._segmentDescriptions = segmentDescriptions;
+		this._chartUniqueSuffix = chartUniqueSuffix;
+		this._chartContainer = chartContainer;
 
 
+
+		var container = d3.select(chartContainer);
+		var svgA = container.append("svg")
+			.attr("id", "chartSvg" + this._chartUniqueSuffix);
+		var mainGA = svgA.append("g")
+			.attr("id", "chartGroup" + this._chartUniqueSuffix);
+		var xAxisGroupContainer = mainGA.append("g")
+			.attr("clip-path", "url(#xAxisClipPath" + this._chartUniqueSuffix);
+		xAxisGroupContainer.append("g")
+			.attr("id", "xAxis" + this._chartUniqueSuffix)
+			.attr("class", "x axis");
+		var yAxisGroup = mainGA.append("g")
+			.attr("id", "yAxis" + this._chartUniqueSuffix);
+
+		this._xScale = d3.scale.ordinal<string, number>();
+		this._yScale = d3.scale.linear();
+
+		this._xAxis = d3.svg.axis()
+			.scale(this._xScale)
+			.orient("bottom");
+		this._yAxis = d3.svg.axis()
+			.scale(this._yScale)
+			.orient("left")
+			.ticks(10)
+			
+		//Add a "defs" element to the svg
+		var defs = svgA.append("defs");
+		//Append a clipPath element to the defs element, and a Shape
+		// to define the cliping area
+		defs.append("clipPath")
+			.attr("id", "chartClipPath" + this._chartUniqueSuffix)
+			.append('rect')
+			.attr("id", "contentClipRect" + this._chartUniqueSuffix);
+		//clip path for x axis
+		defs.append("clipPath")
+			.attr("id", "xAxisClipPath" + this._chartUniqueSuffix)
+			.append("rect")
+			.attr("id", "xAxisClipRect" + this._chartUniqueSuffix);
+
+		var contentGA = mainGA.append("g").attr("id", "contentGroup" + this._chartUniqueSuffix);
+
+		this._tooltip = d3.tip<fullDataItem>()
+			.attr('class', 'd3-tip')
+			.offset([-10, 0])
+			.html(
+				d=> "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"
+				);
+			
+		// redaraw from here?	
+		this.drawData(data);
+	
+	}
+
+	drawData(data: SegmentsData) {
 		var margin = { top: 20, right: 20, bottom: 30, left: 40 };
 
+		var container = d3.select(this._chartContainer);
 
-		// redaraw from here?
-		var svg = d3.select("body").select(".budgetPlot");
+		var containerWidth: number = +container.attr("width"),
+			containerHeight: number = +container.attr("height");
 
-		var overlay = svg.append("rect")
-			.attr("class", "overlay")
-			.attr("width", width)
-			.attr("height", height);
+		var svg = container.select("#chartSvg" + this._chartUniqueSuffix)
+			.attr("width", containerWidth)
+			.attr("height", containerHeight);
+
+
+		var width = containerWidth - margin.left - margin.right,
+			height = containerHeight - margin.top - margin.bottom;
+
+		// 		var overlay = svg.append("rect")
+		// 			.attr("class", "overlay")
+		// 			.attr("width", width)
+		// 			.attr("height", height);
 		
-		//.attr("width", width + margin.left + margin.right)
-		//.attr("height", height + margin.top + margin.bottom)
-		var mainG = svg.append("g")
+		var mainG = svg.select("#chartGroup" + this._chartUniqueSuffix)
 			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-		var width = +svg.attr("width") - margin.left - margin.right,
-			height = +svg.attr("height") - margin.top - margin.bottom;
 
 		var itemsPerSegment = d3.max(data.segments.map(seg=> seg.dataItems.length));
-
 		var startupSegmentWidth = itemsPerSegment * this.STRTUP_BAR_WIDTH * (1 + 2 * this.MARGIN_BETWEEN_BAR_GROUPS);
-
 		var widthOfAllData = startupSegmentWidth * data.segments.length;
 
-		var x = d3.scale.ordinal()
-			.rangeRoundBands([0, widthOfAllData], this.MARGIN_BETWEEN_BAR_GROUPS);
-
-		var y = d3.scale.linear()
-			.range([height, 0]);
-
-		var xAxis = d3.svg.axis()
-			.scale(x)
-			.orient("bottom");
-
-		var yAxis = d3.svg.axis()
-			.scale(y)
-			.orient("left")
-		//.ticks(10)
-			;
-
+		this._xScale.rangeRoundBands([0, widthOfAllData], this.MARGIN_BETWEEN_BAR_GROUPS);
+		this._yScale.range([height, 0]);
 
 		var maxValue =
 			d3.max(
@@ -154,15 +219,11 @@ export class Painter {
 				{ return d3.max(seg.dataItems.map(itm=> itm.value)); }
 					));
 
-
-
-		x.domain(data.segments.map(d=> this.getSegmentValueId(d.segment)));
-		y.domain([0, maxValue]);
-
+		this._xScale.domain(data.segments.map(d=> this.getSegmentValueId(d.segment)));
+		this._yScale.domain([0, maxValue]);
 
 		var self = this;
-		//xAxis.tickFormat(segKey=>    segKey+"!!!");
-		xAxis.tickFormat(function(segKey): string {
+		this._xAxis.tickFormat(function(segKey): string {
 			var length = data.segments.length;
 			for (var index = 0; index < length; index++) {
 				var element = data.segments[index];
@@ -174,44 +235,34 @@ export class Painter {
 		}
 			);
 
-		var xAxisGroupContainer = mainG.append("g")
-			.attr("clip-path", "url(#x-clip-path)");
-
-		xAxisGroupContainer.append("g")
-			.attr("class", "x axis")
+		d3.select("#xAxis" + this._chartUniqueSuffix)
 			.attr("transform", "translate(0," + height + ")")
-			.call(xAxis);
+			.call(this._xAxis);
 
-		var yAxisGroup = mainG.append("g")
+		d3.select("#yAxis" + this._chartUniqueSuffix)
 			.attr("class", "y axis")
-			.call(yAxis)
+			.call(this._yAxis)
 			.append("text")
 			.attr("transform", "rotate(-90)")
 			.attr("y", 6)
 			.attr("dy", ".71em")
 			.style("text-anchor", "end")
 			.text(data.yAxisDisplayName);
-			
-					
-		//Add a "defs" element to the svg
-		var defs = svg.append("defs");
 
-		//Append a clipPath element to the defs element, and a Shape
-		// to define the cliping area
-		defs.append("clipPath").attr('id', 'content-clip-path').append('rect')
-			.attr('width', width) //Set the width of the clipping area
+		var yAxisGroup = d3.select("#yAxis" + this._chartUniqueSuffix);
+
+		d3.select("#contentClipRect" + this._chartUniqueSuffix)
+			.attr("width", width) //Set the width of the clipping area
 			.attr("x", +yAxisGroup.attr("width"))
-			.attr('height', height); // set the height of the clipping area
+			.attr("height", height); // set the height of the clipping area
+	
+		d3.select("#xAxisClipRect" + this._chartUniqueSuffix)
+			.attr("width", width) //Set the width of the clipping area
+			.attr("height", height + margin.bottom); // set the height of the clipping area
 
-		//clip path for x axis
-		defs.append("clipPath").attr('id', 'x-clip-path').append('rect')
-			.attr('width', width) //Set the width of the clipping area
-			.attr('height', height + margin.bottom); // set the height of the clipping area
-
-
-		var contentG = mainG.append("g");
-		contentG.attr("clip-path", "url(#content-clip-path)");
-
+	
+		var contentG = d3.select("#contentGroup" + this._chartUniqueSuffix);
+		contentG.attr("clip-path", "url(#chartClipPath" + this._chartUniqueSuffix + ")");
 
 		var segments = contentG.selectAll(".segment")
 			.data(data.segments, seg=> this.getSegmentValueId(seg.segment));
@@ -228,20 +279,13 @@ export class Painter {
 			translateX = translateX > 0 ? 0 : translateX;
 			var maxTranslateX = widthOfAllData * scale - width;
 			translateX = translateX < (-maxTranslateX) ? (-maxTranslateX) : translateX;
-
-
-			segmentGroups.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)")
-
+			var segmentsA = contentG.selectAll(".segment")
+			segmentsA.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)")
 			svg.select(".x.axis")
 				.attr("transform", "translate(" + translateX + "," + (height) + ")")
-				.call(xAxis.scale(x.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
-
-			//svg.select(".y.axis").call(yAxis);
+				.call(this._xAxis.scale(this._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
+			this._tooltip.hide();
 		});
-		
-		var tooltip=d3.tip<fullDataItem>();
-		
-		tooltip.html(d=>d.dataItem.seriesId);
 
 		segments.selectAll("rect")
 			.data(
@@ -250,21 +294,21 @@ export class Painter {
 			.enter()
 			.append("rect")
 			.attr("class", itm=> this.getSeries(itm.dataItem.seriesId).cssClass)
-			.attr("x", (itm, i) => x(this.getSegmentValueId(itm.segment.segment)) + i * x.rangeBand() / itemsPerSegment)
-			.attr("width", itm=> x.rangeBand() / itemsPerSegment)
-			.attr("y", itm=> y(itm.dataItem.value))
+			.attr("x", (itm, i) => this._xScale(this.getSegmentValueId(itm.segment.segment)) + i * this._xScale.rangeBand() / itemsPerSegment)
+			.attr("width", itm=> this._xScale.rangeBand() / itemsPerSegment)
+			.attr("y", itm=> this._yScale(itm.dataItem.value))
 			.attr("data-ziv-val", itm=> itm.dataItem.value)
-			.attr("height", itm=> height - y(itm.dataItem.value))
-			.call(tooltip)
-			  .on('mouseover', tooltip.show)
-  .on('mouseout', tooltip.hide)
-			;
-			
+			.attr("height", itm=> height - this._yScale(itm.dataItem.value))
+			.call(this._tooltip)
+			.on('mouseover', this._tooltip.show)
+			.on('mouseout', this._tooltip.hide);
+
 		svg.call(zoom);
 	}
-	
 
-	private getSegmentValueId(segment: SegmentValue): string {
+
+
+	getSegmentValueId(segment: SegmentValue): string {
 		return segment.segmentId + "_" + segment.valueId
 	}
 
@@ -279,20 +323,13 @@ export class Painter {
 				return this._seriesDescriptions[index]
 			}
 		}
-		
-		/*		this._seriesDescriptions.forEach(
-					sd=>{
-						if (sd.id==seriesId) return sd
-						});
-						*/
 		throw new RangeError("Series not found. id:" + seriesId);
 		return null;
 	}
 }
 
 
-	interface fullDataItem
-	{
-		dataItem: DataItem,
-		segment: SegmentDataItems
-	}
+interface fullDataItem {
+	dataItem: DataItem,
+	segment: SegmentDataItems
+}
