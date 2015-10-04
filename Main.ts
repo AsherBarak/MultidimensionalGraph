@@ -237,6 +237,15 @@ class Program {
 			data,
 			null,
 			"#budgetPlot");
+			
+		data.segments.pop();
+		data.segments.pop();
+		// data.segments.pop();
+		// data.segments.pop();
+		// data.segments.pop();
+		// data.segments.pop();
+		
+		painter.drawData(data);
 	}
 }
 

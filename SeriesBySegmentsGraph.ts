@@ -105,12 +105,16 @@ export class Painter {
 	private _xAxis: d3.svg.Axis;
 	private _yAxis: d3.svg.Axis;
 	private _tooltip: d3.Tip<fullDataItem>;
+	private _dataCallback: (params: SegmentdRequestParams) => SegmentsData;
+	private _requestParams: SegmentdRequestParams
+
+	private _clickX: number;
 
 	setup(
 		seriesDescriptions: SeriesDescription[],
 		segmentDescriptions: SegmentDescription[],
 		data: SegmentsData,
-		dataCallback: (SegmentdRequestParams) => SegmentsData,
+		dataCallback: (params: SegmentdRequestParams) => SegmentsData,
 		/**
 		 * Search string for the page element to contain the chart:
 		 * @example
@@ -126,8 +130,7 @@ export class Painter {
 		this._segmentDescriptions = segmentDescriptions;
 		this._chartUniqueSuffix = chartUniqueSuffix;
 		this._chartContainer = chartContainer;
-
-
+		this._dataCallback = dataCallback;
 
 		var container = d3.select(chartContainer);
 		var svgA = container.append("svg")
@@ -169,16 +172,10 @@ export class Painter {
 
 		var contentGA = mainGA.append("g").attr("id", "contentGroup" + this._chartUniqueSuffix);
 
-		this._tooltip = d3.tip<fullDataItem>()
-			.attr('class', 'd3-tip')
-			.offset([-10, 0])
-			.html(
-				d=> "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"
-				);
+
 			
 		// redaraw from here?	
 		this.drawData(data);
-	
 	}
 
 	drawData(data: SegmentsData) {
@@ -267,9 +264,30 @@ export class Painter {
 		var segments = contentG.selectAll(".segment")
 			.data(data.segments, seg=> this.getSegmentValueId(seg.segment));
 
-		var segmentGroups = segments.enter()
+		var self = this;
+		segments.on("click",
+			(function(seg) {
+				// Animate clicked segemtn to reload animation:
+				
+				// d3.select(<Node>this)
+				// 	.transition()
+				// 	.attr("transform", "rotate(30)")
+				var newData = self._dataCallback()
+
+				self._clickX = d3.event.x;
+				self.drawData(newData);
+			})
+			)
+
+		segments.enter()
 			.append("g")
 			.attr("class", "segment");
+
+		var exitingSegments = segments.exit();
+
+		// exit segemtns not clicked:
+		exitingSegments.transition()
+			.style("opacity", 0).remove();
 
 		var zoom = d3.behavior.zoom().scaleExtent([width / widthOfAllData, width / (startupSegmentWidth * 2)]).on("zoom", () => {
 			var scale = (<any>d3.event).scale;
@@ -287,21 +305,37 @@ export class Painter {
 			this._tooltip.hide();
 		});
 
-		segments.selectAll("rect")
+		this._tooltip = d3.tip<fullDataItem>()
+			.attr('class', 'd3-tip')
+			.offset([-10, 0])
+			.html(
+				d=> "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"
+				);
+
+		var bars = segments.selectAll("rect")
 			.data(
 				sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
-				itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId)
-			.enter()
+				itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
+
+		var barEnterStartX = this._clickX,
+			barEnterStartY = height;
+
+		bars.enter()
 			.append("rect")
 			.attr("class", itm=> this.getSeries(itm.dataItem.seriesId).cssClass)
+			.attr("x", barEnterStartX)
+			.attr("y", barEnterStartY)
+			.transition()
 			.attr("x", (itm, i) => this._xScale(this.getSegmentValueId(itm.segment.segment)) + i * this._xScale.rangeBand() / itemsPerSegment)
 			.attr("width", itm=> this._xScale.rangeBand() / itemsPerSegment)
 			.attr("y", itm=> this._yScale(itm.dataItem.value))
 			.attr("data-ziv-val", itm=> itm.dataItem.value)
 			.attr("height", itm=> height - this._yScale(itm.dataItem.value))
-			.call(this._tooltip)
-			.on('mouseover', this._tooltip.show)
-			.on('mouseout', this._tooltip.hide);
+		//.call(this._tooltip)
+		//.on('mouseover', this._tooltip.show)
+		//.on('mouseout', this._tooltip.hide)
+		;
+		bars.exit().remove();
 
 		svg.call(zoom);
 	}

@@ -141,10 +141,6 @@ define(["require", "exports"], function (require, exports) {
                 .append("rect")
                 .attr("id", "xAxisClipRect" + this._chartUniqueSuffix);
             var contentGA = mainGA.append("g").attr("id", "contentGroup" + this._chartUniqueSuffix);
-            this._tooltip = d3.tip()
-                .attr('class', 'd3-tip')
-                .offset([-10, 0])
-                .html(function (d) { return "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"; });
             // redaraw from here?	
             this.drawData(data);
         };
@@ -206,9 +202,22 @@ define(["require", "exports"], function (require, exports) {
             contentG.attr("clip-path", "url(#chartClipPath" + this._chartUniqueSuffix + ")");
             var segments = contentG.selectAll(".segment")
                 .data(data.segments, function (seg) { return _this.getSegmentValueId(seg.segment); });
-            var segmentGroups = segments.enter()
+            var self = this;
+            segments.on("click", (function (seg) {
+                // Animate clicked segemtn to reload animation:
+                // d3.select(<Node>this)
+                // 	.transition()
+                // 	.attr("transform", "rotate(30)")
+                self._clickX = d3.event.x;
+                self.drawData(data);
+            }));
+            segments.enter()
                 .append("g")
                 .attr("class", "segment");
+            var exitingSegments = segments.exit();
+            // exit segemtns not clicked:
+            exitingSegments.transition()
+                .style("opacity", 0).remove();
             var zoom = d3.behavior.zoom().scaleExtent([width / widthOfAllData, width / (startupSegmentWidth * 2)]).on("zoom", function () {
                 var scale = d3.event.scale;
                 var translateX = d3.event.translate[0];
@@ -224,19 +233,25 @@ define(["require", "exports"], function (require, exports) {
                     .call(_this._xAxis.scale(_this._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
                 _this._tooltip.hide();
             });
-            segments.selectAll("rect")
-                .data(function (sdi) { return sdi.dataItems.map(function (dataItem) { return { dataItem: dataItem, segment: sdi }; }); }, function (itm) { return _this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId; })
-                .enter()
+            this._tooltip = d3.tip()
+                .attr('class', 'd3-tip')
+                .offset([-10, 0])
+                .html(function (d) { return "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"; });
+            var bars = segments.selectAll("rect")
+                .data(function (sdi) { return sdi.dataItems.map(function (dataItem) { return { dataItem: dataItem, segment: sdi }; }); }, function (itm) { return _this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId; });
+            var barEnterStartX = this._clickX, barEnterStartY = height;
+            bars.enter()
                 .append("rect")
                 .attr("class", function (itm) { return _this.getSeries(itm.dataItem.seriesId).cssClass; })
+                .attr("x", barEnterStartX)
+                .attr("y", barEnterStartY)
+                .transition()
                 .attr("x", function (itm, i) { return _this._xScale(_this.getSegmentValueId(itm.segment.segment)) + i * _this._xScale.rangeBand() / itemsPerSegment; })
                 .attr("width", function (itm) { return _this._xScale.rangeBand() / itemsPerSegment; })
                 .attr("y", function (itm) { return _this._yScale(itm.dataItem.value); })
                 .attr("data-ziv-val", function (itm) { return itm.dataItem.value; })
-                .attr("height", function (itm) { return height - _this._yScale(itm.dataItem.value); })
-                .call(this._tooltip)
-                .on('mouseover', this._tooltip.show)
-                .on('mouseout', this._tooltip.hide);
+                .attr("height", function (itm) { return height - _this._yScale(itm.dataItem.value); });
+            bars.exit().remove();
             svg.call(zoom);
         };
         Painter.prototype.getSegmentValueId = function (segment) {
