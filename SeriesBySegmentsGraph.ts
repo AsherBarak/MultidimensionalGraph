@@ -48,11 +48,11 @@ export class DataRequestParams {
 	date: Date;
 }
 
-export class SegmentdRequestParams extends DataRequestParams {
+export class SegmentRequestParams extends DataRequestParams {
 	/** 
 	 * Id's of segments by which the retrived data should to be segmented.
 	*/
-	requestedSegments: string[];
+	requestedSegmentId: string;
 }
 
 export class TimelineRequestParams extends DataRequestParams {
@@ -105,16 +105,16 @@ export class Painter {
 	private _xAxis: d3.svg.Axis;
 	private _yAxis: d3.svg.Axis;
 	private _tooltip: d3.Tip<fullDataItem>;
-	private _dataCallback: (params: SegmentdRequestParams) => SegmentsData;
-	private _requestParams: SegmentdRequestParams
+	private _dataCallback: (params: SegmentRequestParams) => SegmentsData;
+	private _requestParams: SegmentRequestParams
 
-	private _clickX: number;
+	private _clickX: number = -1;
 
 	setup(
 		seriesDescriptions: SeriesDescription[],
 		segmentDescriptions: SegmentDescription[],
 		data: SegmentsData,
-		dataCallback: (params: SegmentdRequestParams) => SegmentsData,
+		dataCallback: (params: SegmentRequestParams) => SegmentsData,
 		/**
 		 * Search string for the page element to contain the chart:
 		 * @example
@@ -131,6 +131,12 @@ export class Painter {
 		this._chartUniqueSuffix = chartUniqueSuffix;
 		this._chartContainer = chartContainer;
 		this._dataCallback = dataCallback;
+		this._requestParams =
+		{
+			requestedSegmentId: null,
+			filterSegments: startFilters != null ? startFilters : [],
+			date: null
+		};
 
 		var container = d3.select(chartContainer);
 		var svgA = container.append("svg")
@@ -272,8 +278,9 @@ export class Painter {
 				// d3.select(<Node>this)
 				// 	.transition()
 				// 	.attr("transform", "rotate(30)")
-				var newData = self._dataCallback()
-
+				
+				self._requestParams.filterSegments.push(seg.segment);
+				var newData = self._dataCallback(self._requestParams)
 				self._clickX = d3.event.x;
 				self.drawData(newData);
 			})
@@ -317,7 +324,7 @@ export class Painter {
 				sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
 				itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
 
-		var barEnterStartX = this._clickX,
+		var barEnterStartX = this._clickX < 0 ? width / 2 : this._clickX,
 			barEnterStartY = height;
 
 		bars.enter()

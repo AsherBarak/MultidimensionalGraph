@@ -34,14 +34,14 @@ define(["require", "exports"], function (require, exports) {
         return DataRequestParams;
     })();
     exports.DataRequestParams = DataRequestParams;
-    var SegmentdRequestParams = (function (_super) {
-        __extends(SegmentdRequestParams, _super);
-        function SegmentdRequestParams() {
+    var SegmentRequestParams = (function (_super) {
+        __extends(SegmentRequestParams, _super);
+        function SegmentRequestParams() {
             _super.apply(this, arguments);
         }
-        return SegmentdRequestParams;
+        return SegmentRequestParams;
     })(DataRequestParams);
-    exports.SegmentdRequestParams = SegmentdRequestParams;
+    exports.SegmentRequestParams = SegmentRequestParams;
     var TimelineRequestParams = (function (_super) {
         __extends(TimelineRequestParams, _super);
         function TimelineRequestParams() {
@@ -88,6 +88,7 @@ define(["require", "exports"], function (require, exports) {
         function Painter() {
             this.STRTUP_BAR_WIDTH = 35;
             this.MARGIN_BETWEEN_BAR_GROUPS = 0.1;
+            this._clickX = -1;
         }
         Painter.prototype.setup = function (seriesDescriptions, segmentDescriptions, data, dataCallback, 
             /**
@@ -106,6 +107,13 @@ define(["require", "exports"], function (require, exports) {
             this._segmentDescriptions = segmentDescriptions;
             this._chartUniqueSuffix = chartUniqueSuffix;
             this._chartContainer = chartContainer;
+            this._dataCallback = dataCallback;
+            this._requestParams =
+                {
+                    requestedSegmentId: null,
+                    filterSegments: startFilters != null ? startFilters : [],
+                    date: null
+                };
             var container = d3.select(chartContainer);
             var svgA = container.append("svg")
                 .attr("id", "chartSvg" + this._chartUniqueSuffix);
@@ -208,8 +216,10 @@ define(["require", "exports"], function (require, exports) {
                 // d3.select(<Node>this)
                 // 	.transition()
                 // 	.attr("transform", "rotate(30)")
+                self._requestParams.filterSegments.push(seg.segment);
+                var newData = self._dataCallback(self._requestParams);
                 self._clickX = d3.event.x;
-                self.drawData(data);
+                self.drawData(newData);
             }));
             segments.enter()
                 .append("g")
@@ -239,7 +249,7 @@ define(["require", "exports"], function (require, exports) {
                 .html(function (d) { return "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"; });
             var bars = segments.selectAll("rect")
                 .data(function (sdi) { return sdi.dataItems.map(function (dataItem) { return { dataItem: dataItem, segment: sdi }; }); }, function (itm) { return _this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId; });
-            var barEnterStartX = this._clickX, barEnterStartY = height;
+            var barEnterStartX = this._clickX < 0 ? width / 2 : this._clickX, barEnterStartY = height;
             bars.enter()
                 .append("rect")
                 .attr("class", function (itm) { return _this.getSeries(itm.dataItem.seriesId).cssClass; })
