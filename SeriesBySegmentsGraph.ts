@@ -270,21 +270,6 @@ export class Painter {
 		var segments = contentG.selectAll(".segment")
 			.data(data.segments, seg=> this.getSegmentValueId(seg.segment));
 
-		var self = this;
-		segments.on("click",
-			(function(seg) {
-				// Animate clicked segemtn to reload animation:
-				
-				// d3.select(<Node>this)
-				// 	.transition()
-				// 	.attr("transform", "rotate(30)")
-				
-				self._requestParams.filterSegments.push(seg.segment);
-				var newData = self._dataCallback(self._requestParams)
-				self._clickX = d3.event.x;
-				self.drawData(newData);
-			})
-			)
 
 		segments.enter()
 			.append("g")
@@ -323,8 +308,16 @@ export class Painter {
 			.data(
 				sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
 				itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
-
-		var barEnterStartX = this._clickX < 0 ? width / 2 : this._clickX,
+/*
+		bars.on("click", () => {
+			var v = [];
+			for (var index = 0; index < v.length; index++) {
+				var element = v[index];
+				
+			}
+		})
+*/
+		var barEnterStartX = this._clickX < 0 ? width / 2 : this._clickX-(startupSegmentWidth/2),
 			barEnterStartY = height;
 
 		bars.enter()
@@ -332,7 +325,7 @@ export class Painter {
 			.attr("class", itm=> this.getSeries(itm.dataItem.seriesId).cssClass)
 			.attr("x", barEnterStartX)
 			.attr("y", barEnterStartY)
-			.transition()
+			.transition().duration(1500)
 			.attr("x", (itm, i) => this._xScale(this.getSegmentValueId(itm.segment.segment)) + i * this._xScale.rangeBand() / itemsPerSegment)
 			.attr("width", itm=> this._xScale.rangeBand() / itemsPerSegment)
 			.attr("y", itm=> this._yScale(itm.dataItem.value))
@@ -343,6 +336,26 @@ export class Painter {
 		//.on('mouseout', this._tooltip.hide)
 		;
 		bars.exit().remove();
+
+
+		var self = this;
+		segments.on("click",
+			(function(seg) {
+				// Animate clicked segemtn to reload animation:
+				/*
+				d3.select(<Node>this)
+					.transition()
+					.attr("transform", "rotate(30)")
+				
+				*/
+				self._requestParams.requestedSegmentId="item";
+				self._requestParams.filterSegments.push(seg.segment);
+				var newData = self._dataCallback(self._requestParams)
+				self._clickX = d3.event.x;
+				self.drawData(newData);
+				
+			})
+			)
 
 		svg.call(zoom);
 	}

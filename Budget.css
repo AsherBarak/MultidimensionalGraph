@@ -45,3 +45,10 @@
   top: 100%;
   left: 0;
 }
+
+.segment
+{
+  background-color: red;
+  pointer-events: all;
+  fill: amediumaquamarine;
+}

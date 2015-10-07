@@ -2,7 +2,7 @@ import * as SeriesBySegment from "SeriesBySegmentsGraph"
 
 export class TrialsBudgetDataGenerator {
 	private static _isDataInitialized: boolean;
-	private static _segments: SeriesBySegment.SegmentValueForDisplay[];
+	private static _segments: SeriesBySegment.SegmentValueForDisplay[]=[];
 	private static _data: DataElement[] = [];
 	private static NUMBER_OF_VALUES_PER_SEGMENT: number = 10;
 	private static NUMBER_OF_DATA_ELEMENTS: number = 10000;
@@ -65,19 +65,44 @@ export class TrialsBudgetDataGenerator {
 		var data = TrialsBudgetDataGenerator._data.slice(0);
 
 		params.filterSegments.forEach(filterSeg => {
-			data = 
-				data.filter(el=> 
-					el.segments.filter(
-						seg=> seg.segmentId == filterSeg.segmentId 
+			data =
+			data.filter(el=>
+				el.segments.filter(
+					seg=> seg.segmentId == filterSeg.segmentId
 						&& seg.valueId == filterSeg.valueId).length > 0)
 		});
 
-params.requestedSegments
-		data.map(data=>)
+		var segments: SeriesBySegment.SegmentDataItems[] = [];
+
+		data.forEach(item=> {
+			var itemSegment = item.segments.filter(seg=> seg.segmentId == params.requestedSegmentId)[0];
+			var groupedSegments = segments.filter(seg=> seg.segment.valueId == itemSegment.valueId);
+			var groupedSegment: SeriesBySegment.SegmentDataItems;
+			if (groupedSegments.length == 0) {
+				groupedSegment = {
+					segment: itemSegment,
+					dataItems: []
+				}
+				segments.push(groupedSegment)
+			} else {
+				groupedSegment = groupedSegments[0];
+			}
+			item.data.forEach(di => {
+				var dataItem: SeriesBySegment.DataItem;
+				var existingDataItems = groupedSegment.dataItems.filter(item=> item.seriesId == di.seriesId);
+				if (existingDataItems.length == 0) {
+					dataItem = { seriesId: di.seriesId, value: 0 };
+					groupedSegment.dataItems.push(dataItem);
+				} else {
+					dataItem = existingDataItems[0];
+				}
+				dataItem.value += di.value;
+			});
+		})
 
 		return {
-			segments:null,
-			yAxisDisplayName:"MONEY!!"
+			segments: segments,
+			yAxisDisplayName: "MONEY!!"
 		};
 	}
 
@@ -101,7 +126,8 @@ params.requestedSegments
 	}
 
 	private static initalizeSegment(segmentDescription: SeriesBySegment.SegmentDescription) {
-		for (var index = 0; index < TrialsBudgetDataGenerator.NUMBER_OF_VALUES_PER_SEGMENT * segmentDescription.parentSegmentsIds.length; index++) {
+		var multiplier=segmentDescription.parentSegmentsIds!=null?segmentDescription.parentSegmentsIds.length:1;
+		for (var index = 0; index < TrialsBudgetDataGenerator.NUMBER_OF_VALUES_PER_SEGMENT * multiplier; index++) {
 			var segmentValue: SeriesBySegment.SegmentValueForDisplay = {
 				segmentId: segmentDescription.id,
 				valueId: index.toString(),
@@ -129,12 +155,14 @@ params.requestedSegments
 			var segmetValues = TrialsBudgetDataGenerator.getSegmentsDescriptions().map(segDesc=> {
 
 				var relevantSegmentValues = TrialsBudgetDataGenerator._segments.filter(seg=> seg.segmentId == segDesc.id);
-				var segmentValueId = relevantSegmentValues[TrialsBudgetDataGenerator.GetRandom(0, relevantSegmentValues.length - 1)].valueId;
-				var segmentValue: SeriesBySegment.SegmentValue = {
-					segmentId: segDesc.id,
-					valueId: segmentValueId,
-				};
-				return segmentValue;
+				return relevantSegmentValues[TrialsBudgetDataGenerator.GetRandom(0, relevantSegmentValues.length - 1)];
+				
+				// var segmentValueId = relevantSegmentValues[TrialsBudgetDataGenerator.GetRandom(0, relevantSegmentValues.length - 1)].valueId;
+				// var segmentValue: SeriesBySegment.SegmentValueForDisplay = {
+				// 	segmentId: segDesc.id,
+				// 	valueId: segmentValueId,
+				// };
+				// return segmentValue;
 
 			})
 
@@ -156,6 +184,6 @@ params.requestedSegments
 
 
 class DataElement {
-	segments: SeriesBySegment.SegmentValue[];
+	segments: SeriesBySegment.SegmentValueForDisplay[];
 	data: SeriesBySegment.DataItem[];
 }

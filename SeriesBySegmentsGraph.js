@@ -210,17 +210,6 @@ define(["require", "exports"], function (require, exports) {
             contentG.attr("clip-path", "url(#chartClipPath" + this._chartUniqueSuffix + ")");
             var segments = contentG.selectAll(".segment")
                 .data(data.segments, function (seg) { return _this.getSegmentValueId(seg.segment); });
-            var self = this;
-            segments.on("click", (function (seg) {
-                // Animate clicked segemtn to reload animation:
-                // d3.select(<Node>this)
-                // 	.transition()
-                // 	.attr("transform", "rotate(30)")
-                self._requestParams.filterSegments.push(seg.segment);
-                var newData = self._dataCallback(self._requestParams);
-                self._clickX = d3.event.x;
-                self.drawData(newData);
-            }));
             segments.enter()
                 .append("g")
                 .attr("class", "segment");
@@ -249,19 +238,43 @@ define(["require", "exports"], function (require, exports) {
                 .html(function (d) { return "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"; });
             var bars = segments.selectAll("rect")
                 .data(function (sdi) { return sdi.dataItems.map(function (dataItem) { return { dataItem: dataItem, segment: sdi }; }); }, function (itm) { return _this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId; });
-            var barEnterStartX = this._clickX < 0 ? width / 2 : this._clickX, barEnterStartY = height;
+            /*
+                    bars.on("click", () => {
+                        var v = [];
+                        for (var index = 0; index < v.length; index++) {
+                            var element = v[index];
+                            
+                        }
+                    })
+            */
+            var barEnterStartX = this._clickX < 0 ? width / 2 : this._clickX - (startupSegmentWidth / 2), barEnterStartY = height;
             bars.enter()
                 .append("rect")
                 .attr("class", function (itm) { return _this.getSeries(itm.dataItem.seriesId).cssClass; })
                 .attr("x", barEnterStartX)
                 .attr("y", barEnterStartY)
-                .transition()
+                .transition().duration(1500)
                 .attr("x", function (itm, i) { return _this._xScale(_this.getSegmentValueId(itm.segment.segment)) + i * _this._xScale.rangeBand() / itemsPerSegment; })
                 .attr("width", function (itm) { return _this._xScale.rangeBand() / itemsPerSegment; })
                 .attr("y", function (itm) { return _this._yScale(itm.dataItem.value); })
                 .attr("data-ziv-val", function (itm) { return itm.dataItem.value; })
                 .attr("height", function (itm) { return height - _this._yScale(itm.dataItem.value); });
             bars.exit().remove();
+            var self = this;
+            segments.on("click", (function (seg) {
+                // Animate clicked segemtn to reload animation:
+                /*
+                d3.select(<Node>this)
+                    .transition()
+                    .attr("transform", "rotate(30)")
+                
+                */
+                self._requestParams.requestedSegmentId = "item";
+                self._requestParams.filterSegments.push(seg.segment);
+                var newData = self._dataCallback(self._requestParams);
+                self._clickX = d3.event.x;
+                self.drawData(newData);
+            }));
             svg.call(zoom);
         };
         Painter.prototype.getSegmentValueId = function (segment) {

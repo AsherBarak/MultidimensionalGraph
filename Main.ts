@@ -3,7 +3,8 @@ import {BudgetData} from "DataAccess/DataProvider"
 import {MockDataAccess} from "DataAccess/DataProvider"
 import { BudgetDataRequestParams} from "DataAccess/DataProvider"
 
-import * as SeriesBySegment from "SeriesBySegmentsGraph"
+import * as SeriesBySegment from "SeriesBySegmentsGraph";
+import * as Data from "./TrilasData";
 
 class Program {
 	static main() {
@@ -231,13 +232,29 @@ class Program {
 
 
 		var painter = new SeriesBySegment.Painter();
+		
+		var isUsingDynamicData:boolean=true;
+		if (isUsingDynamicData)
+		{
+			var intialData=Data.TrialsBudgetDataGenerator.getSegmentData({filterSegments:[],date:null,requestedSegmentId:'project'});
+			painter.setup(
+			Data.TrialsBudgetDataGenerator.getSeriesDescriptions(),
+			Data.TrialsBudgetDataGenerator.getSegmentsDescriptions(),
+			intialData,
+			Data.TrialsBudgetDataGenerator.getSegmentData,
+			"#budgetPlot"
+		);
+		//painter.drawData(intialData);
+		
+		}else{
 		painter.setup(
 			seriesDescriptions,
 			segmentDescriptions,
 			data,
 			null,
 			"#budgetPlot");
-			
+			}
+		/*	
 		data.segments.pop();
 		data.segments.pop();
 		// data.segments.pop();
@@ -246,6 +263,7 @@ class Program {
 		// data.segments.pop();
 		
 		painter.drawData(data);
+		*/
 	}
 }
 

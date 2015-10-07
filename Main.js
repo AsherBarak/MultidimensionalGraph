@@ -1,4 +1,4 @@
-define(["require", "exports", "SeriesBySegmentsGraph"], function (require, exports, SeriesBySegment) {
+define(["require", "exports", "SeriesBySegmentsGraph", "./TrilasData"], function (require, exports, SeriesBySegment, Data) {
     var Program = (function () {
         function Program() {
         }
@@ -221,14 +221,24 @@ define(["require", "exports", "SeriesBySegmentsGraph"], function (require, expor
                 ]
             };
             var painter = new SeriesBySegment.Painter();
-            painter.setup(seriesDescriptions, segmentDescriptions, data, null, "#budgetPlot");
+            var isUsingDynamicData = true;
+            if (isUsingDynamicData) {
+                var intialData = Data.TrialsBudgetDataGenerator.getSegmentData({ filterSegments: [], date: null, requestedSegmentId: 'project' });
+                painter.setup(Data.TrialsBudgetDataGenerator.getSeriesDescriptions(), Data.TrialsBudgetDataGenerator.getSegmentsDescriptions(), intialData, Data.TrialsBudgetDataGenerator.getSegmentData, "#budgetPlot");
+            }
+            else {
+                painter.setup(seriesDescriptions, segmentDescriptions, data, null, "#budgetPlot");
+            }
+            /*
             data.segments.pop();
             data.segments.pop();
             // data.segments.pop();
             // data.segments.pop();
             // data.segments.pop();
             // data.segments.pop();
+            
             painter.drawData(data);
+            */
         };
         return Program;
     })();

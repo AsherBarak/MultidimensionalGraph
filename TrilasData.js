@@ -61,10 +61,36 @@ define(["require", "exports"], function (require, exports) {
                             && seg.valueId == filterSeg.valueId; }).length > 0;
                     });
             });
-            params.requestedSegments;
-            data.map();
+            var segments = [];
+            data.forEach(function (item) {
+                var itemSegment = item.segments.filter(function (seg) { return seg.segmentId == params.requestedSegmentId; })[0];
+                var groupedSegments = segments.filter(function (seg) { return seg.segment.valueId == itemSegment.valueId; });
+                var groupedSegment;
+                if (groupedSegments.length == 0) {
+                    groupedSegment = {
+                        segment: itemSegment,
+                        dataItems: []
+                    };
+                    segments.push(groupedSegment);
+                }
+                else {
+                    groupedSegment = groupedSegments[0];
+                }
+                item.data.forEach(function (di) {
+                    var dataItem;
+                    var existingDataItems = groupedSegment.dataItems.filter(function (item) { return item.seriesId == di.seriesId; });
+                    if (existingDataItems.length == 0) {
+                        dataItem = { seriesId: di.seriesId, value: 0 };
+                        groupedSegment.dataItems.push(dataItem);
+                    }
+                    else {
+                        dataItem = existingDataItems[0];
+                    }
+                    dataItem.value += di.value;
+                });
+            });
             return {
-                segments: null,
+                segments: segments,
                 yAxisDisplayName: "MONEY!!"
             };
         };
@@ -83,7 +109,8 @@ define(["require", "exports"], function (require, exports) {
             });
         };
         TrialsBudgetDataGenerator.initalizeSegment = function (segmentDescription) {
-            for (var index = 0; index < TrialsBudgetDataGenerator.NUMBER_OF_VALUES_PER_SEGMENT * segmentDescription.parentSegmentsIds.length; index++) {
+            var multiplier = segmentDescription.parentSegmentsIds != null ? segmentDescription.parentSegmentsIds.length : 1;
+            for (var index = 0; index < TrialsBudgetDataGenerator.NUMBER_OF_VALUES_PER_SEGMENT * multiplier; index++) {
                 var segmentValue = {
                     segmentId: segmentDescription.id,
                     valueId: index.toString(),
@@ -105,12 +132,13 @@ define(["require", "exports"], function (require, exports) {
                 });
                 var segmetValues = TrialsBudgetDataGenerator.getSegmentsDescriptions().map(function (segDesc) {
                     var relevantSegmentValues = TrialsBudgetDataGenerator._segments.filter(function (seg) { return seg.segmentId == segDesc.id; });
-                    var segmentValueId = relevantSegmentValues[TrialsBudgetDataGenerator.GetRandom(0, relevantSegmentValues.length - 1)].valueId;
-                    var segmentValue = {
-                        segmentId: segDesc.id,
-                        valueId: segmentValueId,
-                    };
-                    return segmentValue;
+                    return relevantSegmentValues[TrialsBudgetDataGenerator.GetRandom(0, relevantSegmentValues.length - 1)];
+                    // var segmentValueId = relevantSegmentValues[TrialsBudgetDataGenerator.GetRandom(0, relevantSegmentValues.length - 1)].valueId;
+                    // var segmentValue: SeriesBySegment.SegmentValueForDisplay = {
+                    // 	segmentId: segDesc.id,
+                    // 	valueId: segmentValueId,
+                    // };
+                    // return segmentValue;
                 });
                 var dataElement = {
                     segments: segmetValues,
@@ -122,6 +150,7 @@ define(["require", "exports"], function (require, exports) {
         TrialsBudgetDataGenerator.GetRandom = function (low, high) {
             return Math.floor((Math.random() * (high - low)) + low);
         };
+        TrialsBudgetDataGenerator._segments = [];
         TrialsBudgetDataGenerator._data = [];
         TrialsBudgetDataGenerator.NUMBER_OF_VALUES_PER_SEGMENT = 10;
         TrialsBudgetDataGenerator.NUMBER_OF_DATA_ELEMENTS = 10000;
