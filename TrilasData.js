@@ -153,7 +153,7 @@ define(["require", "exports"], function (require, exports) {
         TrialsBudgetDataGenerator._segments = [];
         TrialsBudgetDataGenerator._data = [];
         TrialsBudgetDataGenerator.NUMBER_OF_VALUES_PER_SEGMENT = 10;
-        TrialsBudgetDataGenerator.NUMBER_OF_DATA_ELEMENTS = 10000;
+        TrialsBudgetDataGenerator.NUMBER_OF_DATA_ELEMENTS = 100;
         return TrialsBudgetDataGenerator;
     })();
     exports.TrialsBudgetDataGenerator = TrialsBudgetDataGenerator;

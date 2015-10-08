@@ -135,6 +135,9 @@ define(["require", "exports"], function (require, exports) {
                 .scale(this._yScale)
                 .orient("left")
                 .ticks(10);
+            var overlay = svgA.append("rect")
+                .attr("id", "overlay" + this._chartUniqueSuffix)
+                .attr("class", "overlay");
             //Add a "defs" element to the svg
             var defs = svgA.append("defs");
             //Append a clipPath element to the defs element, and a Shape
@@ -161,10 +164,9 @@ define(["require", "exports"], function (require, exports) {
                 .attr("width", containerWidth)
                 .attr("height", containerHeight);
             var width = containerWidth - margin.left - margin.right, height = containerHeight - margin.top - margin.bottom;
-            // 		var overlay = svg.append("rect")
-            // 			.attr("class", "overlay")
-            // 			.attr("width", width)
-            // 			.attr("height", height);
+            // var overlay = d3.select("#overlay" + this._chartUniqueSuffix)
+            // 	.attr("width", width)
+            // 	.attr("height", height);
             var mainG = svg.select("#chartGroup" + this._chartUniqueSuffix)
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
             var itemsPerSegment = d3.max(data.segments.map(function (seg) { return seg.dataItems.length; }));
@@ -230,7 +232,7 @@ define(["require", "exports"], function (require, exports) {
                 svg.select(".x.axis")
                     .attr("transform", "translate(" + translateX + "," + (height) + ")")
                     .call(_this._xAxis.scale(_this._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
-                _this._tooltip.hide();
+                //this._tooltip.hide();
             });
             this._tooltip = d3.tip()
                 .attr('class', 'd3-tip')
@@ -261,6 +263,7 @@ define(["require", "exports"], function (require, exports) {
                 .attr("height", function (itm) { return height - _this._yScale(itm.dataItem.value); });
             bars.exit().remove();
             var self = this;
+            segments.on("click.drag", function () { return d3.event.stopPropagation(); });
             segments.on("click", (function (seg) {
                 // Animate clicked segemtn to reload animation:
                 /*
@@ -269,6 +272,9 @@ define(["require", "exports"], function (require, exports) {
                     .attr("transform", "rotate(30)")
                 
                 */
+                var t = d3.event.target;
+                var rt = d3.event.relatedTarget;
+                var ct = d3.event.currentTarget;
                 self._requestParams.requestedSegmentId = "item";
                 self._requestParams.filterSegments.push(seg.segment);
                 var newData = self._dataCallback(self._requestParams);

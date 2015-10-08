@@ -161,6 +161,12 @@ export class Painter {
 			.scale(this._yScale)
 			.orient("left")
 			.ticks(10)
+
+
+		var overlay = svgA.append("rect")
+			.attr("id", "overlay" + this._chartUniqueSuffix)
+			.attr("class", "overlay");
+			
 			
 		//Add a "defs" element to the svg
 		var defs = svgA.append("defs");
@@ -177,8 +183,6 @@ export class Painter {
 			.attr("id", "xAxisClipRect" + this._chartUniqueSuffix);
 
 		var contentGA = mainGA.append("g").attr("id", "contentGroup" + this._chartUniqueSuffix);
-
-
 			
 		// redaraw from here?	
 		this.drawData(data);
@@ -200,11 +204,10 @@ export class Painter {
 		var width = containerWidth - margin.left - margin.right,
 			height = containerHeight - margin.top - margin.bottom;
 
-		// 		var overlay = svg.append("rect")
-		// 			.attr("class", "overlay")
-		// 			.attr("width", width)
-		// 			.attr("height", height);
-		
+		// var overlay = d3.select("#overlay" + this._chartUniqueSuffix)
+		// 	.attr("width", width)
+		// 	.attr("height", height);
+
 		var mainG = svg.select("#chartGroup" + this._chartUniqueSuffix)
 			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -294,7 +297,8 @@ export class Painter {
 			svg.select(".x.axis")
 				.attr("transform", "translate(" + translateX + "," + (height) + ")")
 				.call(this._xAxis.scale(this._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
-			this._tooltip.hide();
+			//this._tooltip.hide();
+
 		});
 
 		this._tooltip = d3.tip<fullDataItem>()
@@ -308,16 +312,16 @@ export class Painter {
 			.data(
 				sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
 				itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
-/*
-		bars.on("click", () => {
-			var v = [];
-			for (var index = 0; index < v.length; index++) {
-				var element = v[index];
-				
-			}
-		})
-*/
-		var barEnterStartX = this._clickX < 0 ? width / 2 : this._clickX-(startupSegmentWidth/2),
+		/*
+				bars.on("click", () => {
+					var v = [];
+					for (var index = 0; index < v.length; index++) {
+						var element = v[index];
+						
+					}
+				})
+		*/
+		var barEnterStartX = this._clickX < 0 ? width / 2 : this._clickX - (startupSegmentWidth / 2),
 			barEnterStartY = height;
 
 		bars.enter()
@@ -339,6 +343,7 @@ export class Painter {
 
 
 		var self = this;
+		segments.on("click.drag",()=>d3.event.stopPropagation());
 		segments.on("click",
 			(function(seg) {
 				// Animate clicked segemtn to reload animation:
@@ -348,12 +353,16 @@ export class Painter {
 					.attr("transform", "rotate(30)")
 				
 				*/
-				self._requestParams.requestedSegmentId="item";
+				var t = d3.event.target;
+				var rt = d3.event.relatedTarget;
+				var ct = d3.event.currentTarget;
+
+				self._requestParams.requestedSegmentId = "item";
 				self._requestParams.filterSegments.push(seg.segment);
 				var newData = self._dataCallback(self._requestParams)
 				self._clickX = d3.event.x;
 				self.drawData(newData);
-				
+
 			})
 			)
 
