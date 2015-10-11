@@ -117,12 +117,7 @@ define(["require", "exports"], function (require, exports) {
             this._chartUniqueSuffix = chartUniqueSuffix;
             this._chartContainer = chartContainer;
             this._dataCallback = dataCallback;
-            this._requestParams =
-                {
-                    requestedSegmentId: null,
-                    filterSegments: startFilters != null ? startFilters : [],
-                    date: null
-                };
+            this._currentFilteringSegments = startFilters == null ? [] : startFilters;
             var container = d3.select(chartContainer);
             var svgA = container.append("svg")
                 .attr("id", "chartSvg" + this._chartUniqueSuffix);
@@ -161,7 +156,10 @@ define(["require", "exports"], function (require, exports) {
                 .append("rect")
                 .attr("id", "xAxisClipRect" + this._chartUniqueSuffix);
             var contentGA = mainGA.append("g").attr("id", "contentGroup" + this._chartUniqueSuffix);
-            // redaraw from here?	
+            var breadcrumbs = svgA.append("svg")
+                .attr("id", "breadcrumbs" + this._chartUniqueSuffix);
+            var breadcrumbs = svgA.append("svg")
+                .attr("id", "availableSegments" + this._chartUniqueSuffix);
             this.drawData(data);
         };
         Painter.prototype.drawData = function (data) {
@@ -291,8 +289,8 @@ define(["require", "exports"], function (require, exports) {
                 d3.select(<Node>this)
                     .transition()
                     .attr("transform", "rotate(30)")
-                
                 */
+<<<<<<< HEAD
                 if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
                     return;
                 }
@@ -303,6 +301,58 @@ define(["require", "exports"], function (require, exports) {
                 self.drawData(newData);
             }));
             svg.call(zoom).on("click.zoom", null);
+=======
+                self._currentFilteringSegments.push(seg.segment);
+                var requestParams = {
+                    requestedSegmentId: "item",
+                    filterSegments: self._currentFilteringSegments,
+                    date: null
+                };
+                var newData = self._dataCallback(requestParams);
+                self._clickX = d3.event.x;
+                self.drawData(newData);
+            }));
+            var breadcrumbs = d3.select("#breadcrumbs" + this._chartUniqueSuffix)
+                .selectAll(".breadcrumb")
+                .data(this._currentFilteringSegments);
+            var crumb = breadcrumbs.enter()
+                .append("g")
+                .attr("class", function (d) { return ("breadcrumb"); });
+            crumb.append("rect")
+                .attr("x", function (d, i) { return i * 100 + 10; })
+                .attr("width", 100)
+                .attr("height", 20);
+            crumb.append("text")
+                .attr("x", function (d, i) { return i * 100 + 10; })
+                .attr("y", 5)
+                .attr("dy", 4)
+                .attr("class", function (d) { return ("breadcrumb text"); })
+                .text(function (d) { return d.displayName; });
+            var availableSegments = this.getAvailableSegments();
+            var availableSegmentsSVG = d3.select("#availableSegments" + this._chartUniqueSuffix);
+            availableSegmentsSVG.attr("y", height - 100);
+            var availableSegmentsG = availableSegmentsSVG
+                .selectAll(".availableSegment")
+                .data(availableSegments);
+            var availableSegment = availableSegmentsG.enter()
+                .append("g")
+                .attr("class", function (d) { return ("availableSegment " + d.cssClass); });
+            //.attr("class", d=> ("availableSegment"));
+            availableSegment.append("rect")
+                .attr("x", function (d, i) { return i * 100 + 10; })
+                .attr("width", 100)
+                .attr("height", 20);
+            availableSegment.append("text")
+                .attr("x", function (d, i) { return i * 100 + 10; })
+                .attr("y", 5)
+                .attr("dy", 4)
+                .attr("class", function (d) { return ("availableSegment text"); })
+                .text(function (d) { return d.displayName; });
+            svg.call(zoom);
+>>>>>>> 77d392d84adf88cc11700b7893fb0ff9ec5d7e32
+        };
+        Painter.prototype.getAvailableSegments = function () {
+            return this._segmentDescriptions;
         };
         Painter.prototype.getSegmentValueId = function (segment) {
             return segment.segmentId + "_" + segment.valueId;

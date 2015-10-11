@@ -111,7 +111,11 @@ export class Painter {
 	private _yAxis: d3.svg.Axis;
 	private _tooltip: d3.Tip<fullDataItem>;
 	private _dataCallback: (params: SegmentRequestParams) => SegmentsData;
+<<<<<<< HEAD
 	private _requestParams: SegmentRequestParams;
+=======
+	private _currentFilteringSegments: SegmentValueForDisplay[];
+>>>>>>> 77d392d84adf88cc11700b7893fb0ff9ec5d7e32
 
 	private _clickX: number = -1;
 	private _lastZoomScale: number = 1;
@@ -140,12 +144,8 @@ export class Painter {
 		this._chartUniqueSuffix = chartUniqueSuffix;
 		this._chartContainer = chartContainer;
 		this._dataCallback = dataCallback;
-		this._requestParams =
-		{
-			requestedSegmentId: null,
-			filterSegments: startFilters != null ? startFilters : [],
-			date: null
-		};
+		this._currentFilteringSegments = startFilters == null ? [] : startFilters;
+
 
 		var container = d3.select(chartContainer);
 		var svgA = container.append("svg")
@@ -192,8 +192,13 @@ export class Painter {
 			.attr("id", "xAxisClipRect" + this._chartUniqueSuffix);
 
 		var contentGA = mainGA.append("g").attr("id", "contentGroup" + this._chartUniqueSuffix);
-			
-		// redaraw from here?	
+
+		var breadcrumbs = svgA.append("svg")
+			.attr("id", "breadcrumbs" + this._chartUniqueSuffix);
+
+		var breadcrumbs = svgA.append("svg")
+			.attr("id", "availableSegments" + this._chartUniqueSuffix);
+
 		this.drawData(data);
 	}
 
@@ -367,8 +372,13 @@ export class Painter {
 		bars.exit().remove();
 
 
+<<<<<<< HEAD
 		
 		//segments.on("click.drag", () => d3.event.stopPropagation());
+=======
+		var self = this;
+		segments.on("click.drag", () => d3.event.stopPropagation());
+>>>>>>> 77d392d84adf88cc11700b7893fb0ff9ec5d7e32
 		segments.on("click",
 			(function(seg) {
 				// Animate clicked segemtn to reload animation:
@@ -376,23 +386,86 @@ export class Painter {
 				d3.select(<Node>this)
 					.transition()
 					.attr("transform", "rotate(30)")
-				
 				*/
+<<<<<<< HEAD
 				if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
 					return;
 				}
 				self._requestParams.requestedSegmentId = "item";
 				self._requestParams.filterSegments.push(seg.segment);
 				var newData = self._dataCallback(self._requestParams)
+=======
+
+				self._currentFilteringSegments.push(seg.segment);
+
+				var requestParams: SegmentRequestParams = {
+					requestedSegmentId: "item",
+					filterSegments: self._currentFilteringSegments,
+					date: null
+				};
+				var newData = self._dataCallback(requestParams)
+>>>>>>> 77d392d84adf88cc11700b7893fb0ff9ec5d7e32
 				self._clickX = d3.event.x;
 				self.drawData(newData);
 
 			})
-			)
+			);
+
+
+		var breadcrumbs = d3.select("#breadcrumbs" + this._chartUniqueSuffix)
+			.selectAll(".breadcrumb")
+			.data(this._currentFilteringSegments);
+
+		var crumb = breadcrumbs.enter()
+			.append("g")
+		// todo add class for specific segment
+			.attr("class", d=> ("breadcrumb"));
+		crumb.append("rect")
+			.attr("x", (d, i) => i * 100 + 10)
+			.attr("width", 100)
+			.attr("height", 20);
+
+		crumb.append("text")
+			.attr("x", (d, i) => i * 100 + 10)
+			.attr("y", 5)
+			.attr("dy", 4)
+			.attr("class", d=> ("breadcrumb text" ))
+			.text(d=> d.displayName);
+
+		var availableSegments = this.getAvailableSegments();
+
+		var availableSegmentsSVG = d3.select("#availableSegments" + this._chartUniqueSuffix);
+		availableSegmentsSVG.attr("y", height - 100);
+
+		var availableSegmentsG =
+			availableSegmentsSVG
+				.selectAll(".availableSegment")
+				.data(availableSegments);
+		var availableSegment = availableSegmentsG.enter()
+			.append("g")
+			//.attr("x", (d, i) => i * 100 + 10)
+		// todo add class for specific segment
+			.attr("class", d=> ("availableSegment " + d.cssClass));
+			//.attr("class", d=> ("availableSegment"));
+
+		availableSegment.append("rect")
+			.attr("x", (d, i) => i * 100 + 10)
+			.attr("width", 100)
+			.attr("height", 20);
+
+		availableSegment.append("text")
+			.attr("x", (d, i) => i * 100 + 10)
+			.attr("y", 5)
+			.attr("dy", 4)
+			.attr("class", d=> ("availableSegment text" ))
+			.text(d=> d.displayName);
 
 		svg.call(zoom).on("click.zoom", null);
 	}
 
+	getAvailableSegments(): SegmentDescription[] {
+		return this._segmentDescriptions;
+	}
 
 
 	getSegmentValueId(segment: SegmentValue): string {
