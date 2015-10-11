@@ -283,6 +283,7 @@ define(["require", "exports"], function (require, exports) {
                 .attr("height", function (itm) { return height - _this._yScale(itm.dataItem.value); });
             bars.exit().remove();
             //segments.on("click.drag", () => d3.event.stopPropagation());
+            var self = this;
             segments.on("click", (function (seg) {
                 // Animate clicked segemtn to reload animation:
                 /*
@@ -290,18 +291,9 @@ define(["require", "exports"], function (require, exports) {
                     .transition()
                     .attr("transform", "rotate(30)")
                 */
-<<<<<<< HEAD
                 if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
                     return;
                 }
-                self._requestParams.requestedSegmentId = "item";
-                self._requestParams.filterSegments.push(seg.segment);
-                var newData = self._dataCallback(self._requestParams);
-                self._clickX = d3.event.x;
-                self.drawData(newData);
-            }));
-            svg.call(zoom).on("click.zoom", null);
-=======
                 self._currentFilteringSegments.push(seg.segment);
                 var requestParams = {
                     requestedSegmentId: "item",
@@ -348,8 +340,7 @@ define(["require", "exports"], function (require, exports) {
                 .attr("dy", 4)
                 .attr("class", function (d) { return ("availableSegment text"); })
                 .text(function (d) { return d.displayName; });
-            svg.call(zoom);
->>>>>>> 77d392d84adf88cc11700b7893fb0ff9ec5d7e32
+            svg.call(zoom).on("click.zoom", null);
         };
         Painter.prototype.getAvailableSegments = function () {
             return this._segmentDescriptions;

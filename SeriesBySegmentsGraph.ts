@@ -111,11 +111,7 @@ export class Painter {
 	private _yAxis: d3.svg.Axis;
 	private _tooltip: d3.Tip<fullDataItem>;
 	private _dataCallback: (params: SegmentRequestParams) => SegmentsData;
-<<<<<<< HEAD
-	private _requestParams: SegmentRequestParams;
-=======
 	private _currentFilteringSegments: SegmentValueForDisplay[];
->>>>>>> 77d392d84adf88cc11700b7893fb0ff9ec5d7e32
 
 	private _clickX: number = -1;
 	private _lastZoomScale: number = 1;
@@ -371,14 +367,8 @@ export class Painter {
 		;
 		bars.exit().remove();
 
-
-<<<<<<< HEAD
-		
 		//segments.on("click.drag", () => d3.event.stopPropagation());
-=======
 		var self = this;
-		segments.on("click.drag", () => d3.event.stopPropagation());
->>>>>>> 77d392d84adf88cc11700b7893fb0ff9ec5d7e32
 		segments.on("click",
 			(function(seg) {
 				// Animate clicked segemtn to reload animation:
@@ -387,15 +377,9 @@ export class Painter {
 					.transition()
 					.attr("transform", "rotate(30)")
 				*/
-<<<<<<< HEAD
 				if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
 					return;
 				}
-				self._requestParams.requestedSegmentId = "item";
-				self._requestParams.filterSegments.push(seg.segment);
-				var newData = self._dataCallback(self._requestParams)
-=======
-
 				self._currentFilteringSegments.push(seg.segment);
 
 				var requestParams: SegmentRequestParams = {
@@ -404,7 +388,6 @@ export class Painter {
 					date: null
 				};
 				var newData = self._dataCallback(requestParams)
->>>>>>> 77d392d84adf88cc11700b7893fb0ff9ec5d7e32
 				self._clickX = d3.event.x;
 				self.drawData(newData);
 
