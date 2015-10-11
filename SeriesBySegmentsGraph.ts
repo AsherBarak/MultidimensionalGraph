@@ -94,6 +94,11 @@ export class TimelineData extends RetrivedData {
 export class Painter {
 	private STRTUP_BAR_WIDTH: number = 35;
 	private MARGIN_BETWEEN_BAR_GROUPS: number = 0.1;
+	/** 
+	 * Zoom based on dragging the chard also invokes the click event.
+	 * We make sure some time elapsed beween last zoom and click invocation. 
+	*/
+	private ZOOM_CLICK_AVOID_DELAY: number = 500;
 
 	private _seriesDescriptions: SeriesDescription[];
 	private _segmentDescriptions: SegmentDescription[];
@@ -106,9 +111,13 @@ export class Painter {
 	private _yAxis: d3.svg.Axis;
 	private _tooltip: d3.Tip<fullDataItem>;
 	private _dataCallback: (params: SegmentRequestParams) => SegmentsData;
-	private _requestParams: SegmentRequestParams
+	private _requestParams: SegmentRequestParams;
 
 	private _clickX: number = -1;
+	private _lastZoomScale: number = 1;
+	private _lastZoomtanslateX: number = 0;
+	private _lastZoomtanslateY: number = 0;
+	private _lastZoomTime: number = Date.now();
 
 	setup(
 		seriesDescriptions: SeriesDescription[],
@@ -243,12 +252,15 @@ export class Painter {
 
 		d3.select("#xAxis" + this._chartUniqueSuffix)
 			.attr("transform", "translate(0," + height + ")")
+			.transition().duration(750).ease("sin-in-out")
 			.call(this._xAxis);
 
-		d3.select("#yAxis" + this._chartUniqueSuffix)
-			.attr("class", "y axis")
-			.call(this._yAxis)
-			.append("text")
+		var yaxis = d3.select("#yAxis" + this._chartUniqueSuffix)
+			.attr("class", "y axis");
+		yaxis
+			.transition().duration(750).ease("sin-in-out")
+			.call(this._yAxis);
+		yaxis.append("text")
 			.attr("transform", "rotate(-90)")
 			.attr("y", 6)
 			.attr("dy", ".71em")
@@ -284,6 +296,8 @@ export class Painter {
 		exitingSegments.transition()
 			.style("opacity", 0).remove();
 
+		var self = this;
+
 		var zoom = d3.behavior.zoom().scaleExtent([width / widthOfAllData, width / (startupSegmentWidth * 2)]).on("zoom", () => {
 			var scale = (<any>d3.event).scale;
 			var translateX: number = (<any>d3.event).translate[0];
@@ -296,8 +310,19 @@ export class Painter {
 			segmentsA.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)")
 			svg.select(".x.axis")
 				.attr("transform", "translate(" + translateX + "," + (height) + ")")
-				.call(this._xAxis.scale(this._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
+				.call(self._xAxis.scale(self._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
+			var isRealZoomEvent: boolean =
+				self._lastZoomScale != scale
+				|| self._lastZoomtanslateX != translateX
+				|| self._lastZoomtanslateY != translateY;
+			if (isRealZoomEvent) {
+				self._lastZoomTime = Date.now();
+				self._lastZoomScale = scale;
+				self._lastZoomtanslateX = translateX;
+				self._lastZoomtanslateY = translateY;
+			}
 			//this._tooltip.hide();
+		
 
 		});
 
@@ -342,8 +367,8 @@ export class Painter {
 		bars.exit().remove();
 
 
-		var self = this;
-		segments.on("click.drag",()=>d3.event.stopPropagation());
+		
+		//segments.on("click.drag", () => d3.event.stopPropagation());
 		segments.on("click",
 			(function(seg) {
 				// Animate clicked segemtn to reload animation:
@@ -353,10 +378,9 @@ export class Painter {
 					.attr("transform", "rotate(30)")
 				
 				*/
-				var t = d3.event.target;
-				var rt = d3.event.relatedTarget;
-				var ct = d3.event.currentTarget;
-
+				if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
+					return;
+				}
 				self._requestParams.requestedSegmentId = "item";
 				self._requestParams.filterSegments.push(seg.segment);
 				var newData = self._dataCallback(self._requestParams)
@@ -366,7 +390,7 @@ export class Painter {
 			})
 			)
 
-		svg.call(zoom);
+		svg.call(zoom).on("click.zoom", null);
 	}
 
 

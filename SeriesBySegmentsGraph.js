@@ -88,7 +88,16 @@ define(["require", "exports"], function (require, exports) {
         function Painter() {
             this.STRTUP_BAR_WIDTH = 35;
             this.MARGIN_BETWEEN_BAR_GROUPS = 0.1;
+            /**
+             * Zoom based on dragging the chard also invokes the click event.
+             * We make sure some time elapsed beween last zoom and click invocation.
+            */
+            this.ZOOM_CLICK_AVOID_DELAY = 500;
             this._clickX = -1;
+            this._lastZoomScale = 1;
+            this._lastZoomtanslateX = 0;
+            this._lastZoomtanslateY = 0;
+            this._lastZoomTime = Date.now();
         }
         Painter.prototype.setup = function (seriesDescriptions, segmentDescriptions, data, dataCallback, 
             /**
@@ -190,11 +199,14 @@ define(["require", "exports"], function (require, exports) {
             });
             d3.select("#xAxis" + this._chartUniqueSuffix)
                 .attr("transform", "translate(0," + height + ")")
+                .transition().duration(750).ease("sin-in-out")
                 .call(this._xAxis);
-            d3.select("#yAxis" + this._chartUniqueSuffix)
-                .attr("class", "y axis")
-                .call(this._yAxis)
-                .append("text")
+            var yaxis = d3.select("#yAxis" + this._chartUniqueSuffix)
+                .attr("class", "y axis");
+            yaxis
+                .transition().duration(750).ease("sin-in-out")
+                .call(this._yAxis);
+            yaxis.append("text")
                 .attr("transform", "rotate(-90)")
                 .attr("y", 6)
                 .attr("dy", ".71em")
@@ -219,6 +231,7 @@ define(["require", "exports"], function (require, exports) {
             // exit segemtns not clicked:
             exitingSegments.transition()
                 .style("opacity", 0).remove();
+            var self = this;
             var zoom = d3.behavior.zoom().scaleExtent([width / widthOfAllData, width / (startupSegmentWidth * 2)]).on("zoom", function () {
                 var scale = d3.event.scale;
                 var translateX = d3.event.translate[0];
@@ -231,7 +244,16 @@ define(["require", "exports"], function (require, exports) {
                 segmentsA.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)");
                 svg.select(".x.axis")
                     .attr("transform", "translate(" + translateX + "," + (height) + ")")
-                    .call(_this._xAxis.scale(_this._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
+                    .call(self._xAxis.scale(self._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
+                var isRealZoomEvent = self._lastZoomScale != scale
+                    || self._lastZoomtanslateX != translateX
+                    || self._lastZoomtanslateY != translateY;
+                if (isRealZoomEvent) {
+                    self._lastZoomTime = Date.now();
+                    self._lastZoomScale = scale;
+                    self._lastZoomtanslateX = translateX;
+                    self._lastZoomtanslateY = translateY;
+                }
                 //this._tooltip.hide();
             });
             this._tooltip = d3.tip()
@@ -262,8 +284,7 @@ define(["require", "exports"], function (require, exports) {
                 .attr("data-ziv-val", function (itm) { return itm.dataItem.value; })
                 .attr("height", function (itm) { return height - _this._yScale(itm.dataItem.value); });
             bars.exit().remove();
-            var self = this;
-            segments.on("click.drag", function () { return d3.event.stopPropagation(); });
+            //segments.on("click.drag", () => d3.event.stopPropagation());
             segments.on("click", (function (seg) {
                 // Animate clicked segemtn to reload animation:
                 /*
@@ -272,16 +293,16 @@ define(["require", "exports"], function (require, exports) {
                     .attr("transform", "rotate(30)")
                 
                 */
-                var t = d3.event.target;
-                var rt = d3.event.relatedTarget;
-                var ct = d3.event.currentTarget;
+                if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
+                    return;
+                }
                 self._requestParams.requestedSegmentId = "item";
                 self._requestParams.filterSegments.push(seg.segment);
                 var newData = self._dataCallback(self._requestParams);
                 self._clickX = d3.event.x;
                 self.drawData(newData);
             }));
-            svg.call(zoom);
+            svg.call(zoom).on("click.zoom", null);
         };
         Painter.prototype.getSegmentValueId = function (segment) {
             return segment.segmentId + "_" + segment.valueId;
