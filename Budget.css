@@ -52,3 +52,47 @@
   pointer-events: all;
   fill: amediumaquamarine;
 }
+
+.availableSegment{
+  fill: red;
+  stroke: black;
+  stroke-width: 3px;
+  
+}
+
+
+.breadcrumb{
+    fill: tan;
+  outline-color: green;
+  outline-width: 5px;
+  
+}
+
+.breadcrumb.text{
+  fill: white;
+   stroke-width: 0;
+  
+}
+
+.subproject{
+  fill: blue;
+  padding: 10px;
+  margin: 10px;
+}
+
+.project{
+  fill: aquamarine;
+  padding: 10px;
+  margin: 10px;
+}
+
+
+.availableSegment.text.subproject{
+  fill: chartreuse;
+}
+
+
+.availableSegment.text{
+  fill: white;
+   stroke-width: 0;
+}

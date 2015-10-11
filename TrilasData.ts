@@ -2,7 +2,7 @@ import * as SeriesBySegment from "SeriesBySegmentsGraph"
 
 export class TrialsBudgetDataGenerator {
 	private static _isDataInitialized: boolean;
-	private static _segments: SeriesBySegment.SegmentValueForDisplay[]=[];
+	private static _segments: SeriesBySegment.SegmentValueForDisplay[] = [];
 	private static _data: DataElement[] = [];
 	private static NUMBER_OF_VALUES_PER_SEGMENT: number = 10;
 	private static NUMBER_OF_DATA_ELEMENTS: number = 100;
@@ -23,11 +23,68 @@ export class TrialsBudgetDataGenerator {
 				parentSegmentsIds: ["project"],
 			},
 			{
+				id: "location",
+				cssClass: "location",
+				displayName: "Location",
+				description: "Location",
+				parentSegmentsIds: ["project"],
+			},
+			{
+				id: "chapter",
+				cssClass: "chapter",
+				displayName: "Chapter",
+				description: "Chapter",
+				parentSegmentsIds: ["project"],
+			},
+			{
+				id: "subchapter",
+				cssClass: "subchapter",
+				displayName: "Subchapter",
+				description: "Subchapter",
+				parentSegmentsIds: ["chapter"],
+			},
+			/*
+			{
+				id: "secondarySubchapter",
+				cssClass: "secondarySubchapter",
+				displayName: "Secondary Subchapter",
+				description: "Secondary Subchapter",
+				parentSegmentsIds: ["subchapter"],
+			},
+			*/
+			{
+				id: "boqItem",
+				cssClass: "boqItem",
+				displayName: "Item",
+				description: "Bill of quantity item",
+				parentSegmentsIds: ["subchapter","location","subproject"],
+			},
+			{
 				id: "item",
 				cssClass: "item",
-				displayName: "Item",
-				description: "Item",
+				displayName: "Inventory Item",
+				description: "Inventory Item",
 			},
+			{
+				id: "account",
+				cssClass: "account",
+				displayName: "Account",
+				description: "Account",
+			},
+			{
+				id: "budgetGroup",
+				cssClass: "budgetGroup",
+				displayName: "Budget Group",
+				description: "Budget Group",
+			},
+			{
+				id: "budgetItem",
+				cssClass: "budgetItem",
+				displayName: "Budget Item",
+				description: "Budget Item",
+				parentSegmentsIds: ["budgetGroup"],
+			},
+
 		];
 		return segmentDescriptions;
 	}
@@ -126,7 +183,7 @@ export class TrialsBudgetDataGenerator {
 	}
 
 	private static initalizeSegment(segmentDescription: SeriesBySegment.SegmentDescription) {
-		var multiplier=segmentDescription.parentSegmentsIds!=null?segmentDescription.parentSegmentsIds.length:1;
+		var multiplier = segmentDescription.parentSegmentsIds != null ? segmentDescription.parentSegmentsIds.length : 1;
 		for (var index = 0; index < TrialsBudgetDataGenerator.NUMBER_OF_VALUES_PER_SEGMENT * multiplier; index++) {
 			var segmentValue: SeriesBySegment.SegmentValueForDisplay = {
 				segmentId: segmentDescription.id,

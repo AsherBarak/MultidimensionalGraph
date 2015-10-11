@@ -18,10 +18,66 @@ define(["require", "exports"], function (require, exports) {
                     parentSegmentsIds: ["project"],
                 },
                 {
+                    id: "location",
+                    cssClass: "location",
+                    displayName: "Location",
+                    description: "Location",
+                    parentSegmentsIds: ["project"],
+                },
+                {
+                    id: "chapter",
+                    cssClass: "chapter",
+                    displayName: "Chapter",
+                    description: "Chapter",
+                    parentSegmentsIds: ["project"],
+                },
+                {
+                    id: "subchapter",
+                    cssClass: "subchapter",
+                    displayName: "Subchapter",
+                    description: "Subchapter",
+                    parentSegmentsIds: ["chapter"],
+                },
+                /*
+                {
+                    id: "secondarySubchapter",
+                    cssClass: "secondarySubchapter",
+                    displayName: "Secondary Subchapter",
+                    description: "Secondary Subchapter",
+                    parentSegmentsIds: ["subchapter"],
+                },
+                */
+                {
+                    id: "boqItem",
+                    cssClass: "boqItem",
+                    displayName: "Item",
+                    description: "Bill of quantity item",
+                    parentSegmentsIds: ["subchapter", "location", "subproject"],
+                },
+                {
                     id: "item",
                     cssClass: "item",
-                    displayName: "Item",
-                    description: "Item",
+                    displayName: "Inventory Item",
+                    description: "Inventory Item",
+                },
+                {
+                    id: "account",
+                    cssClass: "account",
+                    displayName: "Account",
+                    description: "Account",
+                },
+                {
+                    id: "budgetGroup",
+                    cssClass: "budgetGroup",
+                    displayName: "Budget Group",
+                    description: "Budget Group",
+                },
+                {
+                    id: "budgetItem",
+                    cssClass: "budgetItem",
+                    displayName: "Budget Item",
+                    description: "Budget Item",
+                    parentSegmentsIds: ["budgetGroup"],
                 },
             ];
             return segmentDescriptions;
