@@ -397,12 +397,12 @@ export class Painter {
 
 		var breadcrumbs = d3.select("#breadcrumbs" + this._chartUniqueSuffix)
 			.selectAll(".breadcrumb")
-			.data(this._currentFilteringSegments);
+			.data(this._currentFilteringSegments, seg=> this.getSegmentValueId(seg));
 
 		var crumb = breadcrumbs.enter()
 			.append("g")
 		// todo add class for specific segment
-			.attr("class", d=> ("breadcrumb"));
+			.attr("class", d=> ("breadcrumb "+this.getSegmentDescription(d.segmentId).cssClass));
 		crumb.append("rect")
 			.attr("x", (d, i) => i * 100 + 10)
 			.attr("width", 100)
@@ -412,7 +412,7 @@ export class Painter {
 			.attr("x", (d, i) => i * 100 + 10)
 			.attr("y", 5)
 			.attr("dy", 4)
-			.attr("class", d=> ("breadcrumb text" ))
+			.attr("class", d=> ("breadcrumb text "+this.getSegmentDescription(d.segmentId).cssClass))
 			.text(d=> d.displayName);
 
 		var availableSegments = this.getAvailableSegments();
@@ -423,40 +423,56 @@ export class Painter {
 		var availableSegmentsG =
 			availableSegmentsSVG
 				.selectAll(".availableSegment")
-				.data(availableSegments);
-		var availableSegment = availableSegmentsG.enter()
+				.data(availableSegments, seg=> seg.id);
+
+		availableSegmentsG.exit().transition().remove();
+
+		var availableSegEnter = availableSegmentsG.enter()
 			.append("g")
-			//.attr("x", (d, i) => i * 100 + 10)
+		//.attr("x", (d, i) => i * 100 + 10)
 		// todo add class for specific segment
 			.attr("class", d=> ("availableSegment " + d.cssClass));
-			//.attr("class", d=> ("availableSegment"));
+		//.attr("class", d=> ("availableSegment"));
 
-		availableSegment.append("rect")
+		availableSegEnter.append("rect");
+
+		availableSegmentsG.select("rect")
+			.transition()
 			.attr("x", (d, i) => i * 100 + 10)
 			.attr("width", 100)
 			.attr("height", 20);
 
-		availableSegment.append("text")
+		availableSegEnter.append("text");
+
+		availableSegmentsG.select("text")
+			.transition()
 			.attr("x", (d, i) => i * 100 + 10)
 			.attr("y", 5)
 			.attr("dy", 4)
-			.attr("class", d=> ("availableSegment text" ))
+			.attr("class", d=> ("availableSegment text " + d.cssClass))
 			.text(d=> d.displayName);
+
+
 
 		svg.call(zoom).on("click.zoom", null);
 	}
 
 	getAvailableSegments(): SegmentDescription[] {
-		return this._segmentDescriptions;
+		var segments = this._segmentDescriptions.slice(0);
+		this._currentFilteringSegments.forEach(fltr=> {
+			var filterSegment = segments.filter(seg=> seg.id == fltr.segmentId);
+			if (filterSegment.length > 0) {
+				segments.splice(segments.indexOf(filterSegment[0]), 1);
+			}
+		}
+
+			);
+		return segments;
 	}
 
 
 	getSegmentValueId(segment: SegmentValue): string {
 		return segment.segmentId + "_" + segment.valueId
-	}
-
-	draw(data: SegmentsData) {
-
 	}
 
 	private getSeries(seriesId: string): SeriesDescription {
@@ -469,6 +485,11 @@ export class Painter {
 		throw new RangeError("Series not found. id:" + seriesId);
 		return null;
 	}
+	
+	private getSegmentDescription(segmentId:string):SegmentDescription{
+		return this._segmentDescriptions.filter(seg=>seg.id==segmentId)[0];
+	}
+	
 }
 
 

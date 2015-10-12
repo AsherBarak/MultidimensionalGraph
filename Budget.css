@@ -71,6 +71,7 @@
 .breadcrumb.text{
   fill: white;
    stroke-width: 0;
+   font-weight:bold;
   
 }
 
@@ -95,4 +96,5 @@
 .availableSegment.text{
   fill: white;
    stroke-width: 0;
+   font-weight:bold;
 }
