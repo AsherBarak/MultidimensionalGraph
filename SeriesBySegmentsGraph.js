@@ -230,6 +230,19 @@ define(["require", "exports"], function (require, exports) {
             exitingSegments.transition()
                 .style("opacity", 0).remove();
             var self = this;
+            var drag = d3.behavior.drag()
+                .on("dragstart", function () {
+                //do some drag start stuff...
+                var v = {};
+            })
+                .on("drag", function () {
+                //hey we're dragging, let's update some stuff
+                var v = {};
+            })
+                .on("dragend", function () {
+                //we're done, end some stuff
+                var v = {};
+            });
             var zoom = d3.behavior.zoom().scaleExtent([width / widthOfAllData, width / (startupSegmentWidth * 2)]).on("zoom", function () {
                 var scale = d3.event.scale;
                 var translateX = d3.event.translate[0];
@@ -345,7 +358,8 @@ define(["require", "exports"], function (require, exports) {
                 .attr("dy", 4)
                 .attr("class", function (d) { return ("availableSegment text " + d.cssClass); })
                 .text(function (d) { return d.displayName; });
-            svg.call(zoom).on("click.zoom", null);
+            //	svg.call(zoom).on("click.zoom", null);
+            svg.call(drag);
         };
         Painter.prototype.getAvailableSegments = function () {
             var segments = this._segmentDescriptions.slice(0);

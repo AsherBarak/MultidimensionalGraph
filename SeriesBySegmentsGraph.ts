@@ -297,7 +297,23 @@ export class Painter {
 		exitingSegments.transition()
 			.style("opacity", 0).remove();
 
+
 		var self = this;
+
+		var drag = d3.behavior.drag()
+			.on("dragstart", function() {
+				//do some drag start stuff...
+				var v = {};
+			})
+			.on("drag", function() {
+				//hey we're dragging, let's update some stuff
+				var v = {};
+			})
+			.on("dragend", function() {
+				//we're done, end some stuff
+				var v = {};
+			});
+
 
 		var zoom = d3.behavior.zoom().scaleExtent([width / widthOfAllData, width / (startupSegmentWidth * 2)]).on("zoom", () => {
 			var scale = (<any>d3.event).scale;
@@ -402,7 +418,7 @@ export class Painter {
 		var crumb = breadcrumbs.enter()
 			.append("g")
 		// todo add class for specific segment
-			.attr("class", d=> ("breadcrumb "+this.getSegmentDescription(d.segmentId).cssClass));
+			.attr("class", d=> ("breadcrumb " + this.getSegmentDescription(d.segmentId).cssClass));
 		crumb.append("rect")
 			.attr("x", (d, i) => i * 100 + 10)
 			.attr("width", 100)
@@ -412,7 +428,7 @@ export class Painter {
 			.attr("x", (d, i) => i * 100 + 10)
 			.attr("y", 5)
 			.attr("dy", 4)
-			.attr("class", d=> ("breadcrumb text "+this.getSegmentDescription(d.segmentId).cssClass))
+			.attr("class", d=> ("breadcrumb text " + this.getSegmentDescription(d.segmentId).cssClass))
 			.text(d=> d.displayName);
 
 		var availableSegments = this.getAvailableSegments();
@@ -452,9 +468,9 @@ export class Painter {
 			.attr("class", d=> ("availableSegment text " + d.cssClass))
 			.text(d=> d.displayName);
 
+	//	svg.call(zoom).on("click.zoom", null);
+svg.call(drag);
 
-
-		svg.call(zoom).on("click.zoom", null);
 	}
 
 	getAvailableSegments(): SegmentDescription[] {
@@ -485,11 +501,11 @@ export class Painter {
 		throw new RangeError("Series not found. id:" + seriesId);
 		return null;
 	}
-	
-	private getSegmentDescription(segmentId:string):SegmentDescription{
-		return this._segmentDescriptions.filter(seg=>seg.id==segmentId)[0];
+
+	private getSegmentDescription(segmentId: string): SegmentDescription {
+		return this._segmentDescriptions.filter(seg=> seg.id == segmentId)[0];
 	}
-	
+
 }
 
 
