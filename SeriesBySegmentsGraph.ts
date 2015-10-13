@@ -119,6 +119,9 @@ export class Painter {
 	private _lastZoomtanslateY: number = 0;
 	private _lastZoomTime: number = Date.now();
 
+	private _dragStartPosition: [number, number];
+	private _segementsXTransfomation: number = 0;
+
 	setup(
 		seriesDescriptions: SeriesDescription[],
 		segmentDescriptions: SegmentDescription[],
@@ -147,6 +150,7 @@ export class Painter {
 		var svgA = container.append("svg")
 			.attr("id", "chartSvg" + this._chartUniqueSuffix);
 
+
 		var dataMarker = svgA.append("g")
 			.attr("id", "dataMarker" + this._chartUniqueSuffix)
 		//.attr("opacity",0)
@@ -155,6 +159,10 @@ export class Painter {
 			.style("fill", "red");
 		var mainGA = svgA.append("g")
 			.attr("id", "chartGroup" + this._chartUniqueSuffix);
+		var overlay = mainGA.append("rect")
+			.attr("id", "overlay" + this._chartUniqueSuffix)
+			.attr("class", "overlay");
+
 		var xAxisGroupContainer = mainGA.append("g")
 			.attr("clip-path", "url(#xAxisClipPath" + this._chartUniqueSuffix);
 		xAxisGroupContainer.append("g")
@@ -175,10 +183,7 @@ export class Painter {
 			.ticks(10)
 
 
-		var overlay = svgA.append("rect")
-			.attr("id", "overlay" + this._chartUniqueSuffix)
-			.attr("class", "overlay");
-			
+
 			
 		//Add a "defs" element to the svg
 		var defs = svgA.append("defs");
@@ -217,21 +222,19 @@ export class Painter {
 			.attr("width", containerWidth)
 			.attr("height", containerHeight);
 
-
 		var width = containerWidth - margin.left - margin.right,
 			height = containerHeight - margin.top - margin.bottom;
-
-		// var overlay = d3.select("#overlay" + this._chartUniqueSuffix)
-		// 	.attr("width", width)
-		// 	.attr("height", height);
 
 		var mainG = svg.select("#chartGroup" + this._chartUniqueSuffix)
 			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-
 		var itemsPerSegment = d3.max(data.segments.map(seg=> seg.dataItems.length));
 		var startupSegmentWidth = itemsPerSegment * this.STRTUP_BAR_WIDTH * (1 + 2 * this.MARGIN_BETWEEN_BAR_GROUPS);
 		var widthOfAllData = startupSegmentWidth * data.segments.length;
+
+		var overlay = d3.select("#overlay" + this._chartUniqueSuffix)
+			.attr("width", width)
+			.attr("height", widthOfAllData);
 
 		this._xScale.rangeRoundBands([0, widthOfAllData], this.MARGIN_BETWEEN_BAR_GROUPS);
 		this._yScale.range([height, 0]);
@@ -305,42 +308,26 @@ export class Painter {
 			.style("opacity", 0).remove();
 
 
+
+
 		var self = this;
-
-		var svgDrag = d3.behavior.drag()
+		var overlayDrag = d3.behavior.drag()
 			.on("dragstart", function() {
-				//do some drag start stuff...
-				console.log("svg drag start")
+				self._dragStartPosition = d3.mouse(svg.node());
 			})
 			.on("drag", function() {
-				//hey we're dragging, let's update some stuff
-				console.log("svg drag")
+				var dx = d3.mouse(svg.node())[0] - self._dragStartPosition[0];
+				var segmentsA = contentG.selectAll(".segment")
+				segmentsA.attr("transform", "matrix(1,0,0,1," + (self._segementsXTransfomation + dx) + ",0)")
 			})
 			.on("dragend", function() {
-				//we're done, end some stuff
-				console.log("svg drag end")
+				var dx = d3.mouse(svg.node())[0] - self._dragStartPosition[0];
+				self._segementsXTransfomation += dx;
 			});
-			
-			
-		var barDrag = d3.behavior.drag()
-			.on("dragstart", function() {
-				//do some drag start stuff...
-				console.log("bar drag start")
-			})
-			.on("drag", function() {
-				//hey we're dragging, let's update some stuff
-				console.log("bar drag")
-			})
-			.on("dragend", function() {
-				//we're done, end some stuff
-				console.log("bar drag end")
-			});
-
 
 		var segmentDrag = d3.behavior.drag()
 			.on("dragstart", function() {
-				//do some drag start stuff...
-				console.log("segment drag start")
+				self._dragStartPosition = d3.mouse(svg.node());
 			})
 			.on("drag", function() {
 				//hey we're dragging, let's update some stuff
@@ -348,12 +335,20 @@ export class Painter {
 				var x = chartBaseCoordinates[0];
 				var y = chartBaseCoordinates[1];
 				d3.select("#dataMarker" + self._chartUniqueSuffix)
-				//d3.select(this)
 					.attr("transform", "translate(" + x + "," + y + ")");
+				var dx = x - self._dragStartPosition[0];
+
+				var segmentsA = contentG.selectAll(".segment")
+				var xTransform = (self._segementsXTransfomation + dx);
+				var scale = 1;
+				var maxTranslateX = widthOfAllData * scale - width;
+				xTransform = xTransform < (-maxTranslateX) ? (-maxTranslateX) : xTransform;
+				xTransform = x < 0 ? xTransform : 0;
+				segmentsA.attr("transform", "matrix(1,0,0,1," + xTransform + ",0)")
 			})
 			.on("dragend", function() {
-				//we're done, end some stuff
-				console.log("segment drag end")
+				var dx = d3.mouse(svg.node())[0] - self._dragStartPosition[0];
+				self._segementsXTransfomation += dx;
 			});
 
 
@@ -513,8 +508,8 @@ export class Painter {
 		//	svg.call(zoom).on("click.zoom", null);
 		
 		segments.call(segmentDrag);
-		svg.call(svgDrag);
-		bars.call(barDrag);
+		overlay.call(overlayDrag);
+		//bars.call(barDrag);
 
 	}
 

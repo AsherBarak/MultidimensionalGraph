@@ -98,6 +98,7 @@ define(["require", "exports"], function (require, exports) {
             this._lastZoomtanslateX = 0;
             this._lastZoomtanslateY = 0;
             this._lastZoomTime = Date.now();
+            this._segementsXTransfomation = 0;
         }
         Painter.prototype.setup = function (seriesDescriptions, segmentDescriptions, data, dataCallback, 
             /**
@@ -128,6 +129,9 @@ define(["require", "exports"], function (require, exports) {
                 .style("fill", "red");
             var mainGA = svgA.append("g")
                 .attr("id", "chartGroup" + this._chartUniqueSuffix);
+            var overlay = mainGA.append("rect")
+                .attr("id", "overlay" + this._chartUniqueSuffix)
+                .attr("class", "overlay");
             var xAxisGroupContainer = mainGA.append("g")
                 .attr("clip-path", "url(#xAxisClipPath" + this._chartUniqueSuffix);
             xAxisGroupContainer.append("g")
@@ -144,9 +148,6 @@ define(["require", "exports"], function (require, exports) {
                 .scale(this._yScale)
                 .orient("left")
                 .ticks(10);
-            var overlay = svgA.append("rect")
-                .attr("id", "overlay" + this._chartUniqueSuffix)
-                .attr("class", "overlay");
             //Add a "defs" element to the svg
             var defs = svgA.append("defs");
             //Append a clipPath element to the defs element, and a Shape
@@ -176,14 +177,14 @@ define(["require", "exports"], function (require, exports) {
                 .attr("width", containerWidth)
                 .attr("height", containerHeight);
             var width = containerWidth - margin.left - margin.right, height = containerHeight - margin.top - margin.bottom;
-            // var overlay = d3.select("#overlay" + this._chartUniqueSuffix)
-            // 	.attr("width", width)
-            // 	.attr("height", height);
             var mainG = svg.select("#chartGroup" + this._chartUniqueSuffix)
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
             var itemsPerSegment = d3.max(data.segments.map(function (seg) { return seg.dataItems.length; }));
             var startupSegmentWidth = itemsPerSegment * this.STRTUP_BAR_WIDTH * (1 + 2 * this.MARGIN_BETWEEN_BAR_GROUPS);
             var widthOfAllData = startupSegmentWidth * data.segments.length;
+            var overlay = d3.select("#overlay" + this._chartUniqueSuffix)
+                .attr("width", width)
+                .attr("height", widthOfAllData);
             this._xScale.rangeRoundBands([0, widthOfAllData], this.MARGIN_BETWEEN_BAR_GROUPS);
             this._yScale.range([height, 0]);
             var maxValue = d3.max(data.segments.map(function (seg) { return d3.max(seg.dataItems.map(function (itm) { return itm.value; })); }));
@@ -235,36 +236,22 @@ define(["require", "exports"], function (require, exports) {
             exitingSegments.transition()
                 .style("opacity", 0).remove();
             var self = this;
-            var svgDrag = d3.behavior.drag()
+            var overlayDrag = d3.behavior.drag()
                 .on("dragstart", function () {
-                //do some drag start stuff...
-                console.log("svg drag start");
+                self._dragStartPosition = d3.mouse(svg.node());
             })
                 .on("drag", function () {
-                //hey we're dragging, let's update some stuff
-                console.log("svg drag");
+                var dx = d3.mouse(svg.node())[0] - self._dragStartPosition[0];
+                var segmentsA = contentG.selectAll(".segment");
+                segmentsA.attr("transform", "matrix(1,0,0,1," + (self._segementsXTransfomation + dx) + ",0)");
             })
                 .on("dragend", function () {
-                //we're done, end some stuff
-                console.log("svg drag end");
-            });
-            var barDrag = d3.behavior.drag()
-                .on("dragstart", function () {
-                //do some drag start stuff...
-                console.log("bar drag start");
-            })
-                .on("drag", function () {
-                //hey we're dragging, let's update some stuff
-                console.log("bar drag");
-            })
-                .on("dragend", function () {
-                //we're done, end some stuff
-                console.log("bar drag end");
+                var dx = d3.mouse(svg.node())[0] - self._dragStartPosition[0];
+                self._segementsXTransfomation += dx;
             });
             var segmentDrag = d3.behavior.drag()
                 .on("dragstart", function () {
-                //do some drag start stuff...
-                console.log("segment drag start");
+                self._dragStartPosition = d3.mouse(svg.node());
             })
                 .on("drag", function () {
                 //hey we're dragging, let's update some stuff
@@ -273,10 +260,18 @@ define(["require", "exports"], function (require, exports) {
                 var y = chartBaseCoordinates[1];
                 d3.select("#dataMarker" + self._chartUniqueSuffix)
                     .attr("transform", "translate(" + x + "," + y + ")");
+                var dx = x - self._dragStartPosition[0];
+                var segmentsA = contentG.selectAll(".segment");
+                var xTransform = (self._segementsXTransfomation + dx);
+                var scale = 1;
+                var maxTranslateX = widthOfAllData * scale - width;
+                xTransform = xTransform < (-maxTranslateX) ? (-maxTranslateX) : xTransform;
+                xTransform = x < 0 ? xTransform : 0;
+                segmentsA.attr("transform", "matrix(1,0,0,1," + xTransform + ",0)");
             })
                 .on("dragend", function () {
-                //we're done, end some stuff
-                console.log("segment drag end");
+                var dx = d3.mouse(svg.node())[0] - self._dragStartPosition[0];
+                self._segementsXTransfomation += dx;
             });
             var zoom = d3.behavior.zoom().scaleExtent([width / widthOfAllData, width / (startupSegmentWidth * 2)]).on("zoom", function () {
                 var scale = d3.event.scale;
@@ -395,8 +390,8 @@ define(["require", "exports"], function (require, exports) {
                 .text(function (d) { return d.displayName; });
             //	svg.call(zoom).on("click.zoom", null);
             segments.call(segmentDrag);
-            svg.call(svgDrag);
-            bars.call(barDrag);
+            overlay.call(overlayDrag);
+            //bars.call(barDrag);
         };
         Painter.prototype.getAvailableSegments = function () {
             var segments = this._segmentDescriptions.slice(0);
