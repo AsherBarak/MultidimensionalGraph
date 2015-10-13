@@ -146,6 +146,13 @@ export class Painter {
 		var container = d3.select(chartContainer);
 		var svgA = container.append("svg")
 			.attr("id", "chartSvg" + this._chartUniqueSuffix);
+
+		var dataMarker = svgA.append("g")
+			.attr("id", "dataMarker" + this._chartUniqueSuffix)
+		//.attr("opacity",0)
+			.append("circle")
+			.attr("r", 30)
+			.style("fill", "red");
 		var mainGA = svgA.append("g")
 			.attr("id", "chartGroup" + this._chartUniqueSuffix);
 		var xAxisGroupContainer = mainGA.append("g")
@@ -300,18 +307,53 @@ export class Painter {
 
 		var self = this;
 
-		var drag = d3.behavior.drag()
+		var svgDrag = d3.behavior.drag()
 			.on("dragstart", function() {
 				//do some drag start stuff...
-				var v = {};
+				console.log("svg drag start")
 			})
 			.on("drag", function() {
 				//hey we're dragging, let's update some stuff
-				var v = {};
+				console.log("svg drag")
 			})
 			.on("dragend", function() {
 				//we're done, end some stuff
-				var v = {};
+				console.log("svg drag end")
+			});
+			
+			
+		var barDrag = d3.behavior.drag()
+			.on("dragstart", function() {
+				//do some drag start stuff...
+				console.log("bar drag start")
+			})
+			.on("drag", function() {
+				//hey we're dragging, let's update some stuff
+				console.log("bar drag")
+			})
+			.on("dragend", function() {
+				//we're done, end some stuff
+				console.log("bar drag end")
+			});
+
+
+		var segmentDrag = d3.behavior.drag()
+			.on("dragstart", function() {
+				//do some drag start stuff...
+				console.log("segment drag start")
+			})
+			.on("drag", function() {
+				//hey we're dragging, let's update some stuff
+				var chartBaseCoordinates = d3.mouse(svg.node())
+				var x = chartBaseCoordinates[0];
+				var y = chartBaseCoordinates[1];
+				d3.select("#dataMarker" + self._chartUniqueSuffix)
+				//d3.select(this)
+					.attr("transform", "translate(" + x + "," + y + ")");
+			})
+			.on("dragend", function() {
+				//we're done, end some stuff
+				console.log("segment drag end")
 			});
 
 
@@ -468,8 +510,11 @@ export class Painter {
 			.attr("class", d=> ("availableSegment text " + d.cssClass))
 			.text(d=> d.displayName);
 
-	//	svg.call(zoom).on("click.zoom", null);
-svg.call(drag);
+		//	svg.call(zoom).on("click.zoom", null);
+		
+		segments.call(segmentDrag);
+		svg.call(svgDrag);
+		bars.call(barDrag);
 
 	}
 

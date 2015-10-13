@@ -121,6 +121,11 @@ define(["require", "exports"], function (require, exports) {
             var container = d3.select(chartContainer);
             var svgA = container.append("svg")
                 .attr("id", "chartSvg" + this._chartUniqueSuffix);
+            var dataMarker = svgA.append("g")
+                .attr("id", "dataMarker" + this._chartUniqueSuffix)
+                .append("circle")
+                .attr("r", 30)
+                .style("fill", "red");
             var mainGA = svgA.append("g")
                 .attr("id", "chartGroup" + this._chartUniqueSuffix);
             var xAxisGroupContainer = mainGA.append("g")
@@ -230,18 +235,48 @@ define(["require", "exports"], function (require, exports) {
             exitingSegments.transition()
                 .style("opacity", 0).remove();
             var self = this;
-            var drag = d3.behavior.drag()
+            var svgDrag = d3.behavior.drag()
                 .on("dragstart", function () {
                 //do some drag start stuff...
-                var v = {};
+                console.log("svg drag start");
             })
                 .on("drag", function () {
                 //hey we're dragging, let's update some stuff
-                var v = {};
+                console.log("svg drag");
             })
                 .on("dragend", function () {
                 //we're done, end some stuff
-                var v = {};
+                console.log("svg drag end");
+            });
+            var barDrag = d3.behavior.drag()
+                .on("dragstart", function () {
+                //do some drag start stuff...
+                console.log("bar drag start");
+            })
+                .on("drag", function () {
+                //hey we're dragging, let's update some stuff
+                console.log("bar drag");
+            })
+                .on("dragend", function () {
+                //we're done, end some stuff
+                console.log("bar drag end");
+            });
+            var segmentDrag = d3.behavior.drag()
+                .on("dragstart", function () {
+                //do some drag start stuff...
+                console.log("segment drag start");
+            })
+                .on("drag", function () {
+                //hey we're dragging, let's update some stuff
+                var chartBaseCoordinates = d3.mouse(svg.node());
+                var x = chartBaseCoordinates[0];
+                var y = chartBaseCoordinates[1];
+                d3.select("#dataMarker" + self._chartUniqueSuffix)
+                    .attr("transform", "translate(" + x + "," + y + ")");
+            })
+                .on("dragend", function () {
+                //we're done, end some stuff
+                console.log("segment drag end");
             });
             var zoom = d3.behavior.zoom().scaleExtent([width / widthOfAllData, width / (startupSegmentWidth * 2)]).on("zoom", function () {
                 var scale = d3.event.scale;
@@ -359,7 +394,9 @@ define(["require", "exports"], function (require, exports) {
                 .attr("class", function (d) { return ("availableSegment text " + d.cssClass); })
                 .text(function (d) { return d.displayName; });
             //	svg.call(zoom).on("click.zoom", null);
-            svg.call(drag);
+            segments.call(segmentDrag);
+            svg.call(svgDrag);
+            bars.call(barDrag);
         };
         Painter.prototype.getAvailableSegments = function () {
             var segments = this._segmentDescriptions.slice(0);
