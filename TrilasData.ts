@@ -159,7 +159,7 @@ export class TrialsBudgetDataGenerator {
 
 		return {
 			segments: segments,
-			yAxisDisplayName: "MONEY!!"
+			yAxisDisplayName: "MONEY"
 		};
 	}
 

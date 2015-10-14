@@ -147,7 +147,7 @@ define(["require", "exports"], function (require, exports) {
             });
             return {
                 segments: segments,
-                yAxisDisplayName: "MONEY!!"
+                yAxisDisplayName: "MONEY"
             };
         };
         TrialsBudgetDataGenerator.initializeData = function () {
