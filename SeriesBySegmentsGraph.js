@@ -267,13 +267,13 @@ define(["require", "exports"], function (require, exports) {
                     return;
                 }
                 var targetSelection = d3.select(self._dragTarget);
-                if (targetSelection.classed("availableSegment")) {
+                if ("parentSegmentsIds" in self._dragTarget) {
                     if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
                         return;
                     }
                     self._currentFilteringSegments.push(d3.select(this).datum().segment);
                     var requestParams = {
-                        requestedSegmentId: "item",
+                        requestedSegmentId: self._dragTarget.id,
                         filterSegments: self._currentFilteringSegments,
                         date: null
                     };
@@ -464,6 +464,9 @@ define(["require", "exports"], function (require, exports) {
                 self._dragTarget = null;
             });
             return source;
+        };
+        Painter.prototype.isSegmentDescription = function (target) {
+            return true;
         };
         return Painter;
     })();

@@ -343,14 +343,14 @@ export class Painter {
                 }
 
                 var targetSelection = d3.select(self._dragTarget);
-                if (targetSelection.classed("availableSegment")) {
+                if ("parentSegmentsIds" in self._dragTarget) {
                     if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
                         return;
                     }
                     self._currentFilteringSegments.push(d3.select(this).datum().segment);
 
                     var requestParams: SegmentRequestParams = {
-                        requestedSegmentId: "item",
+                        requestedSegmentId: self._dragTarget.id,
                         filterSegments: self._currentFilteringSegments,
                         date: null
                     };
@@ -595,6 +595,10 @@ export class Painter {
                 self._dragTarget = null;
             });
         return source;
+    }
+    
+    private isSegmentDescription(target:any ): target is SegmentDescription{
+        return true;
     }
 
     //private lightDragTagets
