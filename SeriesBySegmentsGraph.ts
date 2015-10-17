@@ -100,6 +100,16 @@ export class Painter {
 	*/
     private ZOOM_CLICK_AVOID_DELAY: number = 500;
 
+    private CONTROL_MARGINS = { top: 20, right: 20, bottom: 20, left: 40 };
+    private BREADCRUMBS_MARGINS = { top: 0, right: 0, bottom: 20, left: 0 };
+    private BREADCRUMB_DIMENSIONS = {
+        width: 75, height: 30, spacing: 3, tip: 10
+    };
+    private AVAILABLE_SEGMENTS_MARGINS = { top: 20, right: 0, bottom: 0, left: 0 };
+    private AVAILABLE_SEGMENTS_DIMENSIONS = {
+        width: 75, height: 30, spacing: 3, tip: 10
+    };
+
     private _self = this;
 
     private _seriesDescriptions: SeriesDescription[];
@@ -124,6 +134,7 @@ export class Painter {
     private _dragStartPosition: [number, number];
     private _segementsXTransfomation: number = 0;
     private _dragTarget: any = null;
+    private _drageTargetType: DrageTargetType;
 
     setup(
         seriesDescriptions: SeriesDescription[],
@@ -148,30 +159,25 @@ export class Painter {
         this._dataCallback = dataCallback;
         this._currentFilteringSegments = startFilters == null ? [] : startFilters;
 
-
         var container = d3.select(chartContainer);
-        var svgA = container.append("svg")
-            .attr("id", "chartSvg" + this._chartUniqueSuffix);
+        var svg = container.append("svg")
+            .attr("id", "controlSvg" + this._chartUniqueSuffix);
 
+        svg.append("g")
+            .attr("id", "breadcrumbsGroup" + this._chartUniqueSuffix);
 
-        var dataMarker = svgA.append("g")
-            .attr("id", "dataMarker" + this._chartUniqueSuffix)
-        //.attr("opacity",0)
-            .append("circle")
-            .attr("r", 30)
-            .style("fill", "red");
-        var mainGA = svgA.append("g")
+        var chartGroup = svg.append("g")
             .attr("id", "chartGroup" + this._chartUniqueSuffix);
-        var overlay = mainGA.append("rect")
+        var overlay = chartGroup.append("rect")
             .attr("id", "overlay" + this._chartUniqueSuffix)
             .attr("class", "overlay");
 
-        var xAxisGroupContainer = mainGA.append("g")
+        var xAxisGroupContainer = chartGroup.append("g")
             .attr("clip-path", "url(#xAxisClipPath" + this._chartUniqueSuffix);
         xAxisGroupContainer.append("g")
             .attr("id", "xAxis" + this._chartUniqueSuffix)
             .attr("class", "x axis");
-        var yAxisGroup = mainGA.append("g")
+        var yAxisGroup = chartGroup.append("g")
             .attr("id", "yAxis" + this._chartUniqueSuffix);
 
         this._xScale = d3.scale.ordinal<string, number>();
@@ -184,12 +190,9 @@ export class Painter {
             .scale(this._yScale)
             .orient("left")
             .ticks(10)
-
-
-
-			
+	
         //Add a "defs" element to the svg
-        var defs = svgA.append("defs");
+        var defs = svg.append("defs");
         //Append a clipPath element to the defs element, and a Shape
         // to define the cliping area
         defs.append("clipPath")
@@ -202,12 +205,9 @@ export class Painter {
             .append("rect")
             .attr("id", "xAxisClipRect" + this._chartUniqueSuffix);
 
-        var contentGA = mainGA.append("g").attr("id", "contentGroup" + this._chartUniqueSuffix);
+        var contentGA = chartGroup.append("g").attr("id", "contentGroup" + this._chartUniqueSuffix);
 
-        var breadcrumbs = svgA.append("svg")
-            .attr("id", "breadcrumbs" + this._chartUniqueSuffix);
-
-        var breadcrumbs = svgA.append("svg")
+        svg.append("g")
             .attr("id", "availableSegments" + this._chartUniqueSuffix);
 
         this.drawData(data);
@@ -215,45 +215,61 @@ export class Painter {
 
     drawData(data: SegmentsData) {
         this._segementsXTransfomation = 0;
-        var margin = { top: 20, right: 20, bottom: 30, left: 40 };
-
         var container = d3.select(this._chartContainer);
 
         var containerWidth: number = +container.attr("width"),
             containerHeight: number = +container.attr("height");
 
-        var svg = container.select("#chartSvg" + this._chartUniqueSuffix)
+        var svg = container.select("#controlSvg" + this._chartUniqueSuffix)
             .attr("width", containerWidth)
             .attr("height", containerHeight);
 
-        var width = containerWidth - margin.left - margin.right,
-            height = containerHeight - margin.top - margin.bottom;
+        var breadcrumbsTop = (this.CONTROL_MARGINS.top + this.BREADCRUMBS_MARGINS.top);
 
-        var mainG = svg.select("#chartGroup" + this._chartUniqueSuffix)
-            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        var breadcrubmesGroup = d3.select("#breadcrumbsGroup" + this._chartUniqueSuffix)
+            .attr("transform", "translate(" + (this.BREADCRUMBS_MARGINS.left + this.CONTROL_MARGINS.left) + "," + breadcrumbsTop + ")");
+
+        var chartWidth = containerWidth - this.CONTROL_MARGINS.left - this.CONTROL_MARGINS.right,
+            chartHeight = containerHeight
+                - this.CONTROL_MARGINS.top
+                - this.BREADCRUMBS_MARGINS.top
+                - this.BREADCRUMB_DIMENSIONS.height
+                - this.BREADCRUMBS_MARGINS.bottom
+                - this.AVAILABLE_SEGMENTS_MARGINS.top
+                - this.AVAILABLE_SEGMENTS_DIMENSIONS.height
+                - this.AVAILABLE_SEGMENTS_MARGINS.bottom
+                - this.CONTROL_MARGINS.bottom;
+
+        var chartTop = breadcrumbsTop
+            + this.BREADCRUMB_DIMENSIONS.height
+            + this.BREADCRUMBS_MARGINS.bottom;
+
+        var chartGroup = svg.select("#chartGroup" + this._chartUniqueSuffix)
+            .attr("transform", "translate(" + this.CONTROL_MARGINS.left + "," + chartTop + ")");
+
 
         var itemsPerSegment = d3.max(data.segments.map(seg=> seg.dataItems.length));
         var startupSegmentWidth = itemsPerSegment * this.STRTUP_BAR_WIDTH * (1 + 2 * this.MARGIN_BETWEEN_BAR_GROUPS);
         var widthOfAllData = startupSegmentWidth * data.segments.length;
 
         var overlay = d3.select("#overlay" + this._chartUniqueSuffix)
-            .attr("width", width)
-            .attr("height", widthOfAllData);
+            .attr("width", chartWidth)
+            .attr("height", chartHeight);
 
         this._xScale.rangeRoundBands([0, widthOfAllData], this.MARGIN_BETWEEN_BAR_GROUPS);
-        this._yScale.range([height, 0]);
+        this._yScale.range([chartHeight, 0]);
 
         var maxValue =
             d3.max(
                 data.segments.map(seg=>
                 { return d3.max(seg.dataItems.map(itm=> itm.value)); }
-                ));
+                    ));
 
         this._xScale.domain(data.segments.map(d=> this.getSegmentValueId(d.segment)));
         this._yScale.domain([0, maxValue]);
 
         var self = this;
-        this._xAxis.tickFormat(function (segKey): string {
+        this._xAxis.tickFormat(function(segKey): string {
             var length = data.segments.length;
             for (var index = 0; index < length; index++) {
                 var element = data.segments[index];
@@ -263,12 +279,21 @@ export class Painter {
             }
             return "err";
         }
-        );
+            );
 
-        d3.select("#xAxis" + this._chartUniqueSuffix)
-            .attr("transform", "translate(0," + height + ")")
+        var xAxis = d3.select("#xAxis" + this._chartUniqueSuffix)
+            .attr("transform", "translate(0," + chartHeight + ")")
             .transition().duration(750).ease("sin-in-out")
             .call(this._xAxis);
+
+
+        var availableSegmentsTop = chartTop
+            + chartHeight
+        // todo: add x axis height
+            + this.AVAILABLE_SEGMENTS_MARGINS.top;
+
+        var availableSegmentsGroup = d3.select("#availableSegments" + this._chartUniqueSuffix)
+            .attr("transform", "translate(" + (this.CONTROL_MARGINS.left + this.AVAILABLE_SEGMENTS_MARGINS.left) + "," + availableSegmentsTop + ")");
 
         var yaxis = d3.select("#yAxis" + this._chartUniqueSuffix)
             .attr("class", "y axis");
@@ -285,13 +310,13 @@ export class Painter {
         var yAxisGroup = d3.select("#yAxis" + this._chartUniqueSuffix);
 
         d3.select("#contentClipRect" + this._chartUniqueSuffix)
-            .attr("width", width) //Set the width of the clipping area
+            .attr("width", chartWidth) //Set the width of the clipping area
             .attr("x", +yAxisGroup.attr("width"))
-            .attr("height", height); // set the height of the clipping area
+            .attr("height", chartHeight); // set the height of the clipping area
 	
         d3.select("#xAxisClipRect" + this._chartUniqueSuffix)
-            .attr("width", width) //Set the width of the clipping area
-            .attr("height", height + margin.bottom); // set the height of the clipping area
+            .attr("width", chartWidth) //Set the width of the clipping area
+            .attr("height", chartHeight + this.CONTROL_MARGINS.bottom); // set the height of the clipping area
 
 	
         var contentG = d3.select("#contentGroup" + this._chartUniqueSuffix);
@@ -313,29 +338,29 @@ export class Painter {
 
         var self = this;
         var overlayDrag = d3.behavior.drag()
-            .on("dragstart", function () {
+            .on("dragstart", function() {
                 self.dragChartStart();
             })
-            .on("drag", function () {
-                self.dragChart(widthOfAllData, width, height);
+            .on("drag", function() {
+                self.dragChart(widthOfAllData, chartWidth, chartHeight);
             })
-            .on("dragend", function () {
+            .on("dragend", function() {
                 self.dragChartEnd();
             });
 
         var segmentDrag = d3.behavior.drag()
-            .on("dragstart", function () {
+            .on("dragstart", function() {
                 self.dragChartStart();
             })
-            .on("drag", function () {
+            .on("drag", function() {
                 var chartBaseCoordinates = d3.mouse(svg.node())
                 var x = chartBaseCoordinates[0];
                 var y = chartBaseCoordinates[1];
                 d3.select("#dataMarker" + self._chartUniqueSuffix)
-                    .attr("transform", "translate(" + x + "," + y + ")");
-                self.dragChart(widthOfAllData, width, height);
+                    .attr("transform", "translate(" + (x - 0) + "," + (y - 0) + ")");
+                self.dragChart(widthOfAllData, chartWidth, chartHeight);
             })
-            .on("dragend", function () {
+            .on("dragend", function() {
                 self.dragChartEnd();
 
                 if (self._dragTarget == null) {
@@ -343,7 +368,7 @@ export class Painter {
                 }
 
                 var targetSelection = d3.select(self._dragTarget);
-                if ("parentSegmentsIds" in self._dragTarget) {
+                if (self._drageTargetType == DrageTargetType.AvailableSegment) {
                     if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
                         return;
                     }
@@ -360,19 +385,35 @@ export class Painter {
                 }
             });
 
+        var availableSegmentsDrag = d3.behavior.drag()
+            .on("dragstart", function() {
+                self.setDragStartPostion();
+            })
+            .on("drag", function() {
+                var svg = d3.select("#controlSvg" + self._chartUniqueSuffix);
+                var chartBaseCoordinates = d3.mouse(svg.node())
+                var x = chartBaseCoordinates[0];
+                var y = chartBaseCoordinates[1];
+                var dx = x - self._dragStartPosition[0];
+                var dy= y - self._dragStartPosition[1];
+                d3.select(this)
+                .attr("transform", "translate(" + dx + "," + dy + ")")
+            })
+            .on("dragend", function() {
+            });
 
-        var zoom = d3.behavior.zoom().scaleExtent([width / widthOfAllData, width / (startupSegmentWidth * 2)]).on("zoom", () => {
+        var zoom = d3.behavior.zoom().scaleExtent([chartWidth / widthOfAllData, chartWidth / (startupSegmentWidth * 2)]).on("zoom", () => {
             var scale = (<any>d3.event).scale;
             var translateX: number = (<any>d3.event).translate[0];
             var translateY: number = (<any>d3.event).translate[1];
             // Prevent data from moving away from y axis:
             translateX = translateX > 0 ? 0 : translateX;
-            var maxTranslateX = widthOfAllData * scale - width;
+            var maxTranslateX = widthOfAllData * scale - chartWidth;
             translateX = translateX < (-maxTranslateX) ? (-maxTranslateX) : translateX;
             var segmentsA = contentG.selectAll(".segment")
             segmentsA.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)")
             svg.select(".x.axis")
-                .attr("transform", "translate(" + translateX + "," + (height) + ")")
+                .attr("transform", "translate(" + translateX + "," + (chartHeight) + ")")
                 .call(self._xAxis.scale(self._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
 
             var isRealZoomEvent: boolean =
@@ -392,13 +433,13 @@ export class Painter {
             .attr('class', 'd3-tip')
             .offset([-10, 0])
             .html(
-            d=> "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"
-            );
+                d=> "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"
+                );
 
         var bars = segments.selectAll("rect")
             .data(
-            sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
-            itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
+                sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
+                itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
 		/*
 				bars.on("click", () => {
 					var v = [];
@@ -408,8 +449,8 @@ export class Painter {
 					}
 				})
 		*/
-        var barEnterStartX = this._clickX < 0 ? width / 2 : this._clickX - (startupSegmentWidth / 2),
-            barEnterStartY = height;
+        var barEnterStartX = this._clickX < 0 ? chartWidth / 2 : this._clickX - (startupSegmentWidth / 2),
+            barEnterStartY = chartHeight;
 
         bars.enter()
             .append("rect")
@@ -421,7 +462,7 @@ export class Painter {
             .attr("width", itm=> this._xScale.rangeBand() / itemsPerSegment)
             .attr("y", itm=> this._yScale(itm.dataItem.value))
             .attr("data-ziv-val", itm=> itm.dataItem.value)
-            .attr("height", itm=> height - this._yScale(itm.dataItem.value))
+            .attr("height", itm=> chartHeight - this._yScale(itm.dataItem.value))
         //.call(this._tooltip)
         //.on('mouseover', this._tooltip.show)
         //.on('mouseout', this._tooltip.hide)
@@ -431,7 +472,7 @@ export class Painter {
         //segments.on("click.drag", () => d3.event.stopPropagation());
         var self = this;
         segments.on("click",
-            (function (seg) {
+            (function(seg) {
                 // Animate clicked segemtn to reload animation:
 				/*
 				d3.select(<Node>this)
@@ -453,10 +494,11 @@ export class Painter {
                 self.drawData(newData);
 
             })
-        );
+            );
 
 
-        var breadcrumbs = d3.select("#breadcrumbs" + this._chartUniqueSuffix)
+
+        var breadcrumbs = breadcrubmesGroup
             .selectAll(".breadcrumb")
             .data(this._currentFilteringSegments, seg=> this.getSegmentValueId(seg));
 
@@ -465,12 +507,12 @@ export class Painter {
         // todo add class for specific segment
             .attr("class", d=> ("breadcrumb " + this.getSegmentDescription(d.segmentId).cssClass));
         crumb.append("rect")
-            .attr("x", (d, i) => i * 100 + 10)
-            .attr("width", 100)
-            .attr("height", 20);
+            .attr("x", (d, i) => i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing))
+            .attr("width", this.BREADCRUMB_DIMENSIONS.width)
+            .attr("height", this.BREADCRUMB_DIMENSIONS.height);
 
         crumb.append("text")
-            .attr("x", (d, i) => i * 100 + 10)
+            .attr("x", (d, i) => i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing))
             .attr("y", 5)
             .attr("dy", 4)
             .attr("class", d=> ("breadcrumb text " + this.getSegmentDescription(d.segmentId).cssClass))
@@ -478,11 +520,9 @@ export class Painter {
 
         var availableSegments = this.getAvailableSegments();
 
-        var availableSegmentsSVG = d3.select("#availableSegments" + this._chartUniqueSuffix);
-        availableSegmentsSVG.attr("y", height - 100);
 
         var availableSegmentsG =
-            availableSegmentsSVG
+            availableSegmentsGroup
                 .selectAll(".availableSegment")
                 .data(availableSegments, seg=> seg.id);
 
@@ -493,22 +533,22 @@ export class Painter {
         //.attr("x", (d, i) => i * 100 + 10)
         // todo add class for specific segment
             .attr("class", d=> ("availableSegment " + d.cssClass))
-            .call(this.dragTarget, self);
+            .call(this.dragTarget, DrageTargetType.AvailableSegment, self);
         //.attr("class", d=> ("availableSegment"));
 
         availableSegEnter.append("rect");
 
         availableSegmentsG.select("rect")
             .transition()
-            .attr("x", (d, i) => i * 100 + 10)
-            .attr("width", 100)
-            .attr("height", 20);
+            .attr("x", (d, i) => i * (this.AVAILABLE_SEGMENTS_DIMENSIONS.width + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing))
+            .attr("width", this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
+            .attr("height", this.AVAILABLE_SEGMENTS_DIMENSIONS.height);
 
         availableSegEnter.append("text");
 
         availableSegmentsG.select("text")
             .transition()
-            .attr("x", (d, i) => i * 100 + 10)
+            .attr("x", (d, i) => i * (this.AVAILABLE_SEGMENTS_DIMENSIONS.width + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing))
             .attr("y", 5)
             .attr("dy", 4)
             .attr("class", d=> ("availableSegment text " + d.cssClass))
@@ -518,8 +558,19 @@ export class Painter {
 		
         segments.call(segmentDrag);
         overlay.call(overlayDrag);
+        availableSegmentsG.call(availableSegmentsDrag);
         //bars.call(barDrag);
+        
+        // create data marker last so that it is on top of the others:
+        d3.select("#dataMarker" + this._chartUniqueSuffix).remove();
 
+        var dataMarker = svg.append("g")
+            .attr("id", "dataMarker" + this._chartUniqueSuffix)
+        //.attr("opacity",0)
+            .append("circle")
+            .attr("r", 30)
+            .style("fill", "red")
+            .style("pointer-events", "none");
     }
 
     getAvailableSegments(): SegmentDescription[] {
@@ -531,7 +582,7 @@ export class Painter {
             }
         }
 
-        );
+            );
         return segments;
     }
 
@@ -555,13 +606,17 @@ export class Painter {
         return this._segmentDescriptions.filter(seg=> seg.id == segmentId)[0];
     }
 
-    private dragChartStart() {
-        var svg = d3.select("#chartSvg" + this._chartUniqueSuffix);
+    private setDragStartPostion() {
+        var svg = d3.select("#controlSvg" + this._chartUniqueSuffix);
         this._dragStartPosition = d3.mouse(svg.node());
     }
 
+    private dragChartStart() {
+        this.setDragStartPostion();
+    }
+
     private dragChart(widthOfAllData: number, width: number, height: number) {
-        var svg = d3.select("#chartSvg" + this._chartUniqueSuffix);
+        var svg = d3.select("#controlSvg" + this._chartUniqueSuffix);
         var chartBaseCoordinates = d3.mouse(svg.node())
         var x = chartBaseCoordinates[0];
         var y = chartBaseCoordinates[1];
@@ -580,26 +635,28 @@ export class Painter {
     }
 
     private dragChartEnd() {
-        var svg = d3.select("#chartSvg" + this._chartUniqueSuffix);
+        var svg = d3.select("#controlSvg" + this._chartUniqueSuffix);
         var dx = d3.mouse(svg.node())[0] - this._dragStartPosition[0];
         this._segementsXTransfomation += dx;
 
     }
 
 
-    private dragTarget<Datum>(source: d3.Selection<Datum>, self: Painter): d3.Selection<Datum> {
+    private dragTarget<Datum>(source: d3.Selection<Datum>, targetType: DrageTargetType, self: Painter): d3.Selection<Datum> {
         source.on("mouseover", (d) => {
             self._dragTarget = d;
+            self._drageTargetType = targetType;
         })
             .on("mouseout", (d) => {
                 self._dragTarget = null;
+                self._drageTargetType = null;
             });
         return source;
     }
-    
-    private isSegmentDescription(target:any ): target is SegmentDescription{
-        return true;
-    }
+
+    private isSegmentDescription(target: any): target is SegmentDescription{
+    return true;
+}
 
     //private lightDragTagets
 
@@ -609,4 +666,10 @@ export class Painter {
 interface fullDataItem {
     dataItem: DataItem,
     segment: SegmentDataItems
+}
+
+enum DrageTargetType {
+    ChartSegment,
+    AvailableSegment,
+    CurrentXAxisSegment,
 }
