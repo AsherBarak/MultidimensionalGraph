@@ -111,6 +111,8 @@ define(["require", "exports"], function (require, exports) {
             this._segementsXTransfomation = 0;
             this._dragTarget = null;
             this._drageTargetType = DrageTargetType.None;
+            this._dragSource = null;
+            this._drageSourceType = DrageTargetType.None;
         }
         Painter.prototype.setup = function (seriesDescriptions, segmentDescriptions, data, dataCallback, 
             /**
@@ -439,15 +441,19 @@ define(["require", "exports"], function (require, exports) {
             //	svg.call(zoom).on("click.zoom", null);
             segments.call(segmentDrag);
             overlay.call(overlayDrag);
-            availableSegmentsG.call(availableSegmentsDrag);
+            availableSegmentsG.call(this.dragSource, DrageTargetType.AvailableSegment, this);
             //bars.call(barDrag);
-            d3.select("#currentSegment" + this._chartUniqueSuffix).remove();
+            // we use a cobntainer so that the actual element alwais strats with 0 trnasform - easier to manage drag
+            d3.select("#currentSegmentContainer" + this._chartUniqueSuffix).remove();
             var currentSegmentGroup = svg.append("g")
+                .attr("id", "currentSegmentContainer" + this._chartUniqueSuffix)
+                .attr("transform", "translate(" + (this.CONTROL_MARGINS.left + chartWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width) + "," + (availableSegmentsTop - this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing - this.AVAILABLE_SEGMENTS_DIMENSIONS.height) + ")")
+                .append("g")
                 .data(this._segmentDescriptions.filter(function (seg) { return seg.id == data.xAxisSegmentId; }))
                 .attr("id", "currentSegment" + this._chartUniqueSuffix)
                 .attr("class", function (d) { return ("currentSegment " + d.cssClass); })
-                .attr("transform", "translate(" + (this.CONTROL_MARGINS.left + chartWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width) + "," + (availableSegmentsTop - this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing - this.AVAILABLE_SEGMENTS_DIMENSIONS.height) + ")")
-                .call(this.dragTarget, DrageTargetType.CurrentXAxisSegment, this);
+                .call(this.dragTarget, DrageTargetType.CurrentXAxisSegment, this)
+                .call(this.dragSource, DrageTargetType.AvailableSegment, this);
             //.enter();
             currentSegmentGroup.append("rect")
                 .transition()
@@ -537,6 +543,31 @@ define(["require", "exports"], function (require, exports) {
                 self._dragTarget = null;
                 self._drageTargetType = null;
             });
+            return source;
+        };
+        Painter.prototype.dragSource = function (source, targetType, self) {
+            var drag = d3.behavior.drag()
+                .on("dragstart", function () {
+                self.setDragStartPostion();
+                self._drageSourceType = targetType;
+                self._dragSource = this;
+            })
+                .on("drag", function () {
+                var svg = d3.select("#controlSvg" + self._chartUniqueSuffix);
+                var chartBaseCoordinates = d3.mouse(svg.node());
+                var x = chartBaseCoordinates[0];
+                var y = chartBaseCoordinates[1];
+                var dx = x - self._dragStartPosition[0];
+                var dy = y - self._dragStartPosition[1];
+                d3.select(this)
+                    .attr("transform", "translate(" + dx + "," + dy + ")");
+            })
+                .on("dragend", function () {
+                d3.select(this)
+                    .transition()
+                    .attr("transform", "translate(0,0)");
+            });
+            source.call(drag);
             return source;
         };
         Painter.prototype.isSegmentDescription = function (target) {
