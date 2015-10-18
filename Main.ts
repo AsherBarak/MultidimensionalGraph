@@ -58,6 +58,7 @@ class Program {
 
 		var data: SeriesBySegment.SegmentsData =
 			{
+				xAxisSegmentId:"",
 				yAxisDisplayName: "NIS",
 				segments: [
 					{

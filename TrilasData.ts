@@ -57,7 +57,7 @@ export class TrialsBudgetDataGenerator {
 				cssClass: "boqItem",
 				displayName: "Item",
 				description: "Bill of quantity item",
-				parentSegmentsIds: ["subchapter","location","subproject"],
+				parentSegmentsIds: ["subchapter", "location", "subproject"],
 			},
 			{
 				id: "item",
@@ -159,7 +159,8 @@ export class TrialsBudgetDataGenerator {
 
 		return {
 			segments: segments,
-			yAxisDisplayName: "MONEY"
+			yAxisDisplayName: "MONEY",
+			xAxisSegmentId: params.requestedSegmentId
 		};
 	}
 

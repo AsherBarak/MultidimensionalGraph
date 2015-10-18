@@ -110,6 +110,7 @@ define(["require", "exports"], function (require, exports) {
             this._lastZoomTime = Date.now();
             this._segementsXTransfomation = 0;
             this._dragTarget = null;
+            this._drageTargetType = DrageTargetType.None;
         }
         Painter.prototype.setup = function (seriesDescriptions, segmentDescriptions, data, dataCallback, 
             /**
@@ -252,7 +253,8 @@ define(["require", "exports"], function (require, exports) {
             var contentG = d3.select("#contentGroup" + this._chartUniqueSuffix);
             contentG.attr("clip-path", "url(#chartClipPath" + this._chartUniqueSuffix + ")");
             var segments = contentG.selectAll(".segment")
-                .data(data.segments, function (seg) { return _this.getSegmentValueId(seg.segment); });
+                .data(data.segments, function (seg) { return _this.getSegmentValueId(seg.segment); })
+                .call(this.dragTarget, DrageTargetType.CurrentXAxisSegment, this);
             segments.enter()
                 .append("g")
                 .attr("class", "segment");
@@ -410,7 +412,7 @@ define(["require", "exports"], function (require, exports) {
                 .attr("dy", 4)
                 .attr("class", function (d) { return ("breadcrumb text " + _this.getSegmentDescription(d.segmentId).cssClass); })
                 .text(function (d) { return d.displayName; });
-            var availableSegments = this.getAvailableSegments();
+            var availableSegments = this.getAvailableSegments(data.xAxisSegmentId);
             var availableSegmentsG = availableSegmentsGroup
                 .selectAll(".availableSegment")
                 .data(availableSegments, function (seg) { return seg.id; });
@@ -439,6 +441,26 @@ define(["require", "exports"], function (require, exports) {
             overlay.call(overlayDrag);
             availableSegmentsG.call(availableSegmentsDrag);
             //bars.call(barDrag);
+            d3.select("#currentSegment" + this._chartUniqueSuffix).remove();
+            var currentSegmentGroup = svg.append("g")
+                .data(this._segmentDescriptions.filter(function (seg) { return seg.id == data.xAxisSegmentId; }))
+                .attr("id", "currentSegment" + this._chartUniqueSuffix)
+                .attr("class", function (d) { return ("currentSegment " + d.cssClass); })
+                .attr("transform", "translate(" + (this.CONTROL_MARGINS.left + chartWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width) + "," + (availableSegmentsTop - this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing - this.AVAILABLE_SEGMENTS_DIMENSIONS.height) + ")")
+                .call(this.dragTarget, DrageTargetType.CurrentXAxisSegment, this);
+            //.enter();
+            currentSegmentGroup.append("rect")
+                .transition()
+                .attr("x", function (d, i) { return i * (_this.AVAILABLE_SEGMENTS_DIMENSIONS.width + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing); })
+                .attr("width", this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
+                .attr("height", this.AVAILABLE_SEGMENTS_DIMENSIONS.height);
+            currentSegmentGroup.append("text")
+                .transition()
+                .attr("x", function (d, i) { return i * (_this.AVAILABLE_SEGMENTS_DIMENSIONS.width + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing); })
+                .attr("y", 5)
+                .attr("dy", 4)
+                .attr("class", function (d) { return ("currentSegment text " + d.cssClass); })
+                .text(function (d) { return d.displayName; });
             // create data marker last so that it is on top of the others:
             d3.select("#dataMarker" + this._chartUniqueSuffix).remove();
             var dataMarker = svg.append("g")
@@ -448,7 +470,7 @@ define(["require", "exports"], function (require, exports) {
                 .style("fill", "red")
                 .style("pointer-events", "none");
         };
-        Painter.prototype.getAvailableSegments = function () {
+        Painter.prototype.getAvailableSegments = function (xAxisSegmentId) {
             var segments = this._segmentDescriptions.slice(0);
             this._currentFilteringSegments.forEach(function (fltr) {
                 var filterSegment = segments.filter(function (seg) { return seg.id == fltr.segmentId; });
@@ -456,6 +478,8 @@ define(["require", "exports"], function (require, exports) {
                     segments.splice(segments.indexOf(filterSegment[0]), 1);
                 }
             });
+            var filterSegment = segments.filter(function (seg) { return seg.id == xAxisSegmentId; });
+            segments.splice(segments.indexOf(filterSegment[0]), 1);
             return segments;
         };
         Painter.prototype.getSegmentValueId = function (segment) {
@@ -523,9 +547,10 @@ define(["require", "exports"], function (require, exports) {
     exports.Painter = Painter;
     var DrageTargetType;
     (function (DrageTargetType) {
-        DrageTargetType[DrageTargetType["ChartSegment"] = 0] = "ChartSegment";
-        DrageTargetType[DrageTargetType["AvailableSegment"] = 1] = "AvailableSegment";
-        DrageTargetType[DrageTargetType["CurrentXAxisSegment"] = 2] = "CurrentXAxisSegment";
+        DrageTargetType[DrageTargetType["None"] = 0] = "None";
+        DrageTargetType[DrageTargetType["ChartSegment"] = 1] = "ChartSegment";
+        DrageTargetType[DrageTargetType["AvailableSegment"] = 2] = "AvailableSegment";
+        DrageTargetType[DrageTargetType["CurrentXAxisSegment"] = 3] = "CurrentXAxisSegment";
     })(DrageTargetType || (DrageTargetType = {}));
 });
 //# sourceMappingURL=SeriesBySegmentsGraph.js.map

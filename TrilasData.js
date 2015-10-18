@@ -147,7 +147,8 @@ define(["require", "exports"], function (require, exports) {
             });
             return {
                 segments: segments,
-                yAxisDisplayName: "MONEY"
+                yAxisDisplayName: "MONEY",
+                xAxisSegmentId: params.requestedSegmentId
             };
         };
         TrialsBudgetDataGenerator.initializeData = function () {

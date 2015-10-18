@@ -49,6 +49,7 @@ define(["require", "exports", "SeriesBySegmentsGraph", "./TrilasData"], function
                 },
             ];
             var data = {
+                xAxisSegmentId: "",
                 yAxisDisplayName: "NIS",
                 segments: [
                     {

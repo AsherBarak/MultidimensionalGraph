@@ -58,9 +58,13 @@
   fill: red;
   stroke: black;
   stroke-width: 3px;
-  
 }
 
+.currentSegment{
+  fill: red;
+  stroke: black;
+  stroke-width: 3px;
+}
 
 .breadcrumb{
     fill: tan;
@@ -73,7 +77,6 @@
   fill: white;
    stroke-width: 0;
    font-weight:bold;
-  
 }
 
 .subproject{
@@ -93,8 +96,14 @@
   fill: chartreuse;
 }
 
-
 .availableSegment.text{
+  fill: white;
+   stroke-width: 0;
+   font-weight:bold;
+}
+
+
+.currentSegment.text{
   fill: white;
    stroke-width: 0;
    font-weight:bold;
