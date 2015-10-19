@@ -56,14 +56,11 @@
 
 .availableSegment{
   fill: red;
-  stroke: black;
-  stroke-width: 3px;
 }
 
 .currentSegment{
   fill: red;
-  stroke: black;
-  stroke-width: 3px;
+
 }
 
 .breadcrumb{
@@ -107,4 +104,9 @@
   fill: white;
    stroke-width: 0;
    font-weight:bold;
+}
+
+.dragTraget{
+  stroke: black;
+  stroke-width: 3px;
 }

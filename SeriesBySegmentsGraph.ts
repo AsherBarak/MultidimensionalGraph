@@ -135,9 +135,9 @@ export class Painter {
     private _dragStartPosition: [number, number];
     private _segementsXTransfomation: number = 0;
     private _dragTarget: any = null;
-    private _drageTargetType: DrageTargetType = DrageTargetType.None;
+    private _drageTargetType: DrageObjectType = DrageObjectType.None;
     private _dragSource: any = null;
-    private _drageSourceType: DrageTargetType = DrageTargetType.None;
+    private _drageSourceType: DrageObjectType = DrageObjectType.None;
 
     setup(
         seriesDescriptions: SeriesDescription[],
@@ -266,7 +266,7 @@ export class Painter {
             d3.max(
                 data.segments.map(seg=>
                 { return d3.max(seg.dataItems.map(itm=> itm.value)); }
-                    ));
+                ));
 
         this._xScale.domain(data.segments.map(d=> this.getSegmentValueId(d.segment)));
         this._yScale.domain([0, maxValue]);
@@ -282,7 +282,7 @@ export class Painter {
             }
             return "err";
         }
-            );
+        );
 
         var xAxis = d3.select("#xAxis" + this._chartUniqueSuffix)
             .attr("transform", "translate(0," + chartHeight + ")")
@@ -327,7 +327,10 @@ export class Painter {
 
         var segments = contentG.selectAll(".segment")
             .data(data.segments, seg=> this.getSegmentValueId(seg.segment))
-            .call(this.dragTarget, DrageTargetType.CurrentXAxisSegment, this);
+            .call(this.dragTarget, DrageObjectType.ChartSegment, this)
+            .on("mouseover", function() {
+                var v = 3;
+            })
 
 
         segments.enter()
@@ -343,18 +346,18 @@ export class Painter {
         var self = this;
         var overlayDrag = d3.behavior.drag()
             .on("dragstart", function() {
-                self.dragChartStart();
+                self.setDragStartPostion();
             })
             .on("drag", function() {
                 self.dragChart(widthOfAllData, chartWidth, chartHeight);
             })
             .on("dragend", function() {
-                self.dragChartEnd();
+                self.dragChartEnd(this);
             });
 
         var segmentDrag = d3.behavior.drag()
             .on("dragstart", function() {
-                self.dragChartStart();
+                self.dragChartStart(this);
             })
             .on("drag", function() {
                 var chartBaseCoordinates = d3.mouse(svg.node())
@@ -365,14 +368,14 @@ export class Painter {
                 self.dragChart(widthOfAllData, chartWidth, chartHeight);
             })
             .on("dragend", function() {
-                self.dragChartEnd();
+                self.dragChartEnd(this);
 
                 if (self._dragTarget == null) {
                     return;
                 }
 
                 var targetSelection = d3.select(self._dragTarget);
-                if (self._drageTargetType == DrageTargetType.AvailableSegment) {
+                if (self._drageTargetType == DrageObjectType.AvailableSegment) {
                     if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
                         return;
                     }
@@ -387,23 +390,6 @@ export class Painter {
                     self._clickX = d3.event.x;
                     self.drawData(newData);
                 }
-            });
-
-        var availableSegmentsDrag = d3.behavior.drag()
-            .on("dragstart", function() {
-                self.setDragStartPostion();
-            })
-            .on("drag", function() {
-                var svg = d3.select("#controlSvg" + self._chartUniqueSuffix);
-                var chartBaseCoordinates = d3.mouse(svg.node())
-                var x = chartBaseCoordinates[0];
-                var y = chartBaseCoordinates[1];
-                var dx = x - self._dragStartPosition[0];
-                var dy = y - self._dragStartPosition[1];
-                d3.select(this)
-                    .attr("transform", "translate(" + dx + "," + dy + ")")
-            })
-            .on("dragend", function() {
             });
 
         var zoom = d3.behavior.zoom().scaleExtent([chartWidth / widthOfAllData, chartWidth / (startupSegmentWidth * 2)]).on("zoom", () => {
@@ -437,13 +423,16 @@ export class Painter {
             .attr('class', 'd3-tip')
             .offset([-10, 0])
             .html(
-                d=> "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"
-                );
+            d=> "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"
+            );
 
         var bars = segments.selectAll("rect")
             .data(
-                sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
-                itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
+            sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
+            itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId)
+            .on("mouseover", function() {
+                var v = 3;
+            });
 		/*
 				bars.on("click", () => {
 					var v = [];
@@ -498,7 +487,7 @@ export class Painter {
                 self.drawData(newData);
 
             })
-            );
+        );
 
 
 
@@ -537,7 +526,7 @@ export class Painter {
         //.attr("x", (d, i) => i * 100 + 10)
         // todo add class for specific segment
             .attr("class", d=> ("availableSegment " + d.cssClass))
-            .call(this.dragTarget, DrageTargetType.AvailableSegment, self);
+            .call(this.dragTarget, DrageObjectType.AvailableSegment, self);
         //.attr("class", d=> ("availableSegment"));
 
         availableSegEnter.append("rect");
@@ -562,7 +551,7 @@ export class Painter {
 		
         segments.call(segmentDrag);
         overlay.call(overlayDrag);
-        availableSegmentsG.call(this.dragSource, DrageTargetType.AvailableSegment, this);
+        availableSegmentsG.call(this.dragSource, DrageObjectType.AvailableSegment, this);
         //bars.call(barDrag);
         
         // we use a cobntainer so that the actual element alwais strats with 0 trnasform - easier to manage drag
@@ -575,8 +564,8 @@ export class Painter {
             .data(this._segmentDescriptions.filter(seg=> seg.id == data.xAxisSegmentId))
             .attr("id", "currentSegment" + this._chartUniqueSuffix)
             .attr("class", d=> ("currentSegment " + d.cssClass))
-            .call(this.dragTarget, DrageTargetType.CurrentXAxisSegment, this)
-            .call(this.dragSource, DrageTargetType.AvailableSegment, this);
+            .call(this.dragTarget, DrageObjectType.CurrentXAxisSegment, this)
+            .call(this.dragSource, DrageObjectType.CurrentXAxisSegment, this);
         //.enter();
 
         currentSegmentGroup.append("rect")
@@ -613,7 +602,7 @@ export class Painter {
                 segments.splice(segments.indexOf(filterSegment[0]), 1);
             }
         }
-            );
+        );
         var filterSegment = segments.filter(seg=> seg.id == xAxisSegmentId);
         segments.splice(segments.indexOf(filterSegment[0]), 1);
         return segments;
@@ -643,8 +632,8 @@ export class Painter {
         this._dragStartPosition = d3.mouse(svg.node());
     }
 
-    private dragChartStart() {
-        this.setDragStartPostion();
+    private dragChartStart(segment: any) {
+        this.dragStart(this, segment, DrageObjectType.ChartSegment);
     }
 
     private dragChart(widthOfAllData: number, width: number, height: number) {
@@ -666,15 +655,15 @@ export class Painter {
             .call(this._xAxis.scale(this._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
     }
 
-    private dragChartEnd() {
+    private dragChartEnd(segment: any) {
         var svg = d3.select("#controlSvg" + this._chartUniqueSuffix);
         var dx = d3.mouse(svg.node())[0] - this._dragStartPosition[0];
         this._segementsXTransfomation += dx;
-
+        this.dragEnd(this, segment, DrageObjectType.ChartSegment);
     }
 
 
-    private dragTarget<Datum>(source: d3.Selection<Datum>, targetType: DrageTargetType, self: Painter): d3.Selection<Datum> {
+    private dragTarget<Datum>(source: d3.Selection<Datum>, targetType: DrageObjectType, self: Painter): d3.Selection<Datum> {
         source.on("mouseover", (d) => {
             self._dragTarget = d;
             self._drageTargetType = targetType;
@@ -686,36 +675,146 @@ export class Painter {
         return source;
     }
 
-    private dragSource<Datum>(source: d3.Selection<Datum>, targetType: DrageTargetType, self: Painter): d3.Selection<Datum> {
+    private dragSource<Datum>(source: d3.Selection<Datum>, drageSourceType: DrageObjectType, self: Painter): d3.Selection<Datum> {
         var drag = d3.behavior.drag()
             .on("dragstart", function() {
-                self.setDragStartPostion();
-                self._drageSourceType = targetType;
-                self._dragSource = this;
+                self.dragStart(self, this, drageSourceType);
             })
             .on("drag", function() {
-                var svg = d3.select("#controlSvg" + self._chartUniqueSuffix);
-                var chartBaseCoordinates = d3.mouse(svg.node())
-                var x = chartBaseCoordinates[0];
-                var y = chartBaseCoordinates[1];
-                var dx = x - self._dragStartPosition[0];
-                var dy = y - self._dragStartPosition[1];
-                d3.select(this)
-                    .attr("transform", "translate(" + dx + "," + dy + ")")
+                self.drag(self, this, drageSourceType);
             })
             .on("dragend", function() {
-                d3.select(this)
-                    .transition()
-                    .attr("transform", "translate(0,0)")
+                self.dragEnd(self, this, drageSourceType);
             });
 
         source.call(drag);
         return source;
     }
 
+    private dragStart(self: Painter, drageSource: any, dragSourceType: DrageObjectType) {
+        self.setDragStartPostion();
+        self._drageSourceType = dragSourceType;
+        self._dragSource = d3.select(drageSource).datum();
+
+        d3.select(drageSource).style("pointer-events", "none");
+
+        this.markDragTragets(dragSourceType);
+    }
+
+    private drag(self: Painter, drageSource: any, dragSourceType: DrageObjectType) {
+        var svg = d3.select("#controlSvg" + self._chartUniqueSuffix);
+        var chartBaseCoordinates = d3.mouse(svg.node())
+        var x = chartBaseCoordinates[0];
+        var y = chartBaseCoordinates[1];
+        var dx = x - self._dragStartPosition[0];
+        var dy = y - self._dragStartPosition[1];
+        d3.select(drageSource)
+            .attr("transform", "translate(" + dx + "," + dy + ")")
+    }
+
+    private dragEnd(self: Painter, drageSource: any, dragSourceType: DrageObjectType) {
+        d3.select(drageSource).style("pointer-events", "all");
+        self.unmarkDragTragets(dragSourceType);
+
+        switch (self._drageTargetType) {
+            case DrageObjectType.CurrentXAxisSegment:
+                if (dragSourceType == DrageObjectType.AvailableSegment) {
+                    this.changeCurrentSegmentWithAvailablSegment(self._dragTarget, self._dragSource);
+                }
+                break;
+            case DrageObjectType.AvailableSegment:
+                switch (self._drageSourceType) {
+                    case DrageObjectType.CurrentXAxisSegment:
+                        this.changeCurrentSegmentWithAvailablSegment(self._dragSource, self._dragTarget);
+                        break;
+                    case DrageObjectType.ChartSegment:
+                        //this.drillDownToSegment(self.dra);
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case DrageObjectType.ChartSegment:
+                if (dragSourceType == DrageObjectType.AvailableSegment) {
+                    this.drillDownToSegment(
+                        <SegmentValueForDisplay>d3.select(self._dragTarget).datum(),
+                        <SegmentDescription>d3.select(self._dragSource).datum());
+                }
+                break;
+            case DrageObjectType.None:
+            default:
+                d3.select(drageSource)
+                    .transition()
+                    .attr("transform", "translate(0,0)");
+                break;
+        }
+
+        self._drageSourceType = DrageObjectType.None;
+        self._dragSource = null;
+    }
+
+    private drillDownToSegment(drilledSegment: SegmentValueForDisplay, newXAxisSegment: SegmentDescription) {
+        this._currentFilteringSegments.push(drilledSegment);
+
+        var requestParams: SegmentRequestParams = {
+            requestedSegmentId: newXAxisSegment.id,
+            filterSegments: this._currentFilteringSegments,
+            date: null
+        };
+        var newData = this._dataCallback(requestParams)
+        //self._clickX = d3.event.x;
+        this.drawData(newData);
+    }
+
+    private changeCurrentSegmentWithAvailablSegment(xSegment: SegmentDescription, availableSegment: SegmentDescription) {
+
+        var requestParams: SegmentRequestParams = {
+            requestedSegmentId: availableSegment.id,
+            filterSegments: this._currentFilteringSegments,
+            date: null
+        };
+        var newData = this._dataCallback(requestParams)
+        //self._clickX = d3.event.x;
+        this.drawData(newData);
+    }
+
+    private markDragTragets(dragSourceType: DrageObjectType) {
+        var dragTragetSelectors: d3.Selection<any>[] = this.getDragTargets(dragSourceType);
+        dragTragetSelectors.forEach(slct=> slct.classed("dragTraget", true));
+    }
+
+    private unmarkDragTragets(dragSourceType: DrageObjectType) {
+        var dragTragetSelectors: d3.Selection<any>[] = this.getDragTargets(dragSourceType);
+        dragTragetSelectors.forEach(slct=> slct.classed("dragTraget", false));
+    }
+
+    private getDragTargets(dragSourceType: DrageObjectType): d3.Selection<any>[] {
+        switch (dragSourceType) {
+            case DrageObjectType.AvailableSegment:
+                return [
+                    d3.select("#currentSegment"),
+                    d3.selectAll(".segment"),
+                ]
+                break;
+            case DrageObjectType.ChartSegment:
+                return [
+                    d3.selectAll(".availableSegment"),
+                ]
+                break;
+            case DrageObjectType.CurrentXAxisSegment:
+                return [
+                    d3.selectAll(".availableSegment"),
+                ]
+                break;
+            default:
+                return [];
+                break;
+        }
+    }
+
     private isSegmentDescription(target: any): target is SegmentDescription {
-    return true;
-}
+        return true;
+    }
 
     //private lightDragTagets
 
@@ -727,7 +826,7 @@ interface fullDataItem {
     segment: SegmentDataItems
 }
 
-enum DrageTargetType {
+enum DrageObjectType {
     None,
     ChartSegment,
     AvailableSegment,

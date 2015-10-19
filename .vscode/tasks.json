@@ -53,6 +53,8 @@
 	// use the standard tsc problem matcher to find compile problems
 	// in the output.
 	"problemMatcher": "$tsc"
+	
+	//"isWatching": true
 }
 // A task runner configuration for gulp. Gulp provides a less task
 // which compiles less to css.
