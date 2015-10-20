@@ -188,8 +188,6 @@ define(["require", "exports"], function (require, exports) {
                 .attr("width", containerWidth)
                 .attr("height", containerHeight);
             var breadcrumbsTop = (this.CONTROL_MARGINS.top + this.BREADCRUMBS_MARGINS.top);
-            var breadcrubmesGroup = d3.select("#breadcrumbsGroup" + this._chartUniqueSuffix)
-                .attr("transform", "translate(" + (this.BREADCRUMBS_MARGINS.left + this.CONTROL_MARGINS.left) + "," + breadcrumbsTop + ")");
             var chartWidth = containerWidth - this.CONTROL_MARGINS.left - this.CONTROL_MARGINS.right, chartHeight = containerHeight
                 - this.CONTROL_MARGINS.top
                 - this.BREADCRUMBS_MARGINS.top
@@ -313,34 +311,41 @@ define(["require", "exports"], function (require, exports) {
                 }
                 */
             });
-            var zoom = d3.behavior.zoom().scaleExtent([chartWidth / widthOfAllData, chartWidth / (startupSegmentWidth * 2)]).on("zoom", function () {
-                var scale = d3.event.scale;
-                var translateX = d3.event.translate[0];
-                var translateY = d3.event.translate[1];
-                // Prevent data from moving away from y axis:
-                translateX = translateX > 0 ? 0 : translateX;
-                var maxTranslateX = widthOfAllData * scale - chartWidth;
-                translateX = translateX < (-maxTranslateX) ? (-maxTranslateX) : translateX;
-                var segmentsA = contentG.selectAll(".segment");
-                segmentsA.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)");
-                svg.select(".x.axis")
-                    .attr("transform", "translate(" + translateX + "," + (chartHeight) + ")")
-                    .call(self._xAxis.scale(self._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
-                var isRealZoomEvent = self._lastZoomScale != scale
-                    || self._lastZoomtanslateX != translateX
-                    || self._lastZoomtanslateY != translateY;
-                if (isRealZoomEvent) {
-                    self._lastZoomTime = Date.now();
-                    self._lastZoomScale = scale;
-                    self._lastZoomtanslateX = translateX;
-                    self._lastZoomtanslateY = translateY;
-                }
-                //this._tooltip.hide();
-            });
-            this._tooltip = d3.tip()
-                .attr('class', 'd3-tip')
-                .offset([-10, 0])
-                .html(function (d) { return "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"; });
+            /*
+        var zoom = d3.behavior.zoom().scaleExtent([chartWidth / widthOfAllData, chartWidth / (startupSegmentWidth * 2)]).on("zoom", () => {
+            var scale = (<any>d3.event).scale;
+            var translateX: number = (<any>d3.event).translate[0];
+            var translateY: number = (<any>d3.event).translate[1];
+            // Prevent data from moving away from y axis:
+            translateX = translateX > 0 ? 0 : translateX;
+            var maxTranslateX = widthOfAllData * scale - chartWidth;
+            translateX = translateX < (-maxTranslateX) ? (-maxTranslateX) : translateX;
+            var segmentsA = contentG.selectAll(".segment")
+            segmentsA.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)")
+            svg.select(".x.axis")
+                .attr("transform", "translate(" + translateX + "," + (chartHeight) + ")")
+                .call(self._xAxis.scale(self._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
+    
+            var isRealZoomEvent: boolean =
+                self._lastZoomScale != scale
+                || self._lastZoomtanslateX != translateX
+                || self._lastZoomtanslateY != translateY;
+            if (isRealZoomEvent) {
+                self._lastZoomTime = Date.now();
+                self._lastZoomScale = scale;
+                self._lastZoomtanslateX = translateX;
+                self._lastZoomtanslateY = translateY;
+            }
+            //this._tooltip.hide();
+        });
+    
+        this._tooltip = d3.tip<fullDataItem>()
+            .attr('class', 'd3-tip')
+            .offset([-10, 0])
+            .html(
+            d=> "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"
+            );
+    */
             var bars = segments.selectAll("rect")
                 .data(function (sdi) { return sdi.dataItems.map(function (dataItem) { return { dataItem: dataItem, segment: sdi }; }); }, function (itm) { return _this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId; });
             /*
@@ -355,7 +360,8 @@ define(["require", "exports"], function (require, exports) {
             var barEnterStartX = this._clickX < 0 ? chartWidth / 2 : this._clickX - (startupSegmentWidth / 2), barEnterStartY = chartHeight;
             bars.enter()
                 .append("rect")
-                .attr("class", function (itm) { return _this.getSeries(itm.dataItem.seriesId).cssClass; })
+                .attr("class", function (itm) { return _this.getSeries(itm.dataItem.seriesId).cssClass; });
+            bars
                 .attr("x", barEnterStartX)
                 .attr("y", barEnterStartY)
                 .transition().duration(1500)
@@ -369,39 +375,48 @@ define(["require", "exports"], function (require, exports) {
                 var v = 3;
             });
             segments.call(this.dragTarget, DrageObjectType.ChartSegment, this);
-            //segments.on("click.drag", () => d3.event.stopPropagation());
-            var self = this;
-            segments.on("click", (function (seg) {
-                // Animate clicked segemtn to reload animation:
-                /*
-                d3.select(<Node>this)
-                    .transition()
-                    .attr("transform", "rotate(30)")
-                */
-                if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
-                    return;
-                }
-                self._currentFilteringSegments.push(seg.segment);
-                var requestParams = {
-                    requestedSegmentId: "item",
-                    filterSegments: self._currentFilteringSegments,
-                    date: null
-                };
-                var newData = self._dataCallback(requestParams);
-                self._clickX = d3.event.x;
-                self.drawData(newData);
-            }));
-            var breadcrumbs = breadcrubmesGroup
-                .selectAll(".breadcrumb")
+            /*
+                    //segments.on("click.drag", () => d3.event.stopPropagation());
+                    var self = this;
+                    segments.on("click",
+                        (function(seg) {
+                            // Animate clicked segemtn to reload animation:
+                            
+                            d3.select(<Node>this)
+                                .transition()
+                                .attr("transform", "rotate(30)")
+                            
+                            if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
+                                return;
+                            }
+                            self._currentFilteringSegments.push(seg.segment);
+            
+                            var requestParams: SegmentRequestParams = {
+                                requestedSegmentId: "item",
+                                filterSegments: self._currentFilteringSegments,
+                                date: null
+                            };
+                            var newData = self._dataCallback(requestParams)
+                            self._clickX = d3.event.x;
+                            self.drawData(newData);
+            
+                        })
+                        );
+            */
+            var breadcrubmesGroup = d3.select("#breadcrumbsGroup" + this._chartUniqueSuffix)
+                .attr("transform", "translate(" + (this.BREADCRUMBS_MARGINS.left + this.CONTROL_MARGINS.left) + "," + breadcrumbsTop + ")");
+            var breadcrumbWrapperGroups = breadcrubmesGroup.selectAll("g.breadcrumb")
                 .data(this._currentFilteringSegments, function (seg) { return _this.getSegmentValueId(seg); });
-            var crumbEnter = breadcrumbs.enter()
+            breadcrumbWrapperGroups.exit().transition().remove();
+            var crumbEnter = breadcrumbWrapperGroups.enter()
                 .append("g")
-                .attr("class", function (d) { return ("breadcrumb " + _this.getSegmentDescription(d.segmentId).cssClass); });
-            //crumb.append("rect")
-            //    .attr("x", (d, i) => i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing))
-            //    .attr("width", this.BREADCRUMB_DIMENSIONS.width)
-            //    .attr("height", this.BREADCRUMB_DIMENSIONS.height);
-            crumbEnter.append("polygon")
+                .attr("class", function (d) { return ("breadcrumb " + _this.getSegmentDescription(d.segmentId).cssClass); })
+                .call(this.dragSource, DrageObjectType.Breadcrumb, this);
+            ;
+            crumbEnter.append("polygon");
+            breadcrumbWrapperGroups
+                .select("polygon")
+                .transition()
                 .attr("points", function (d, i) {
                 var beradcrumbStart = i * (_this.BREADCRUMB_DIMENSIONS.width + _this.BREADCRUMB_DIMENSIONS.spacing);
                 var points = [];
@@ -416,14 +431,15 @@ define(["require", "exports"], function (require, exports) {
                 return points.join(" ");
             });
             //.style("fill", function (d) { return colors[d.name]; });
-            crumbEnter.append("text")
+            crumbEnter.append("text");
+            breadcrumbWrapperGroups
+                .select("text")
+                .transition()
                 .attr("x", function (d, i) { return i * (_this.BREADCRUMB_DIMENSIONS.width + _this.BREADCRUMB_DIMENSIONS.spacing) + _this.BREADCRUMB_DIMENSIONS.tip + _this.BREADCRUMB_DIMENSIONS.textSpacing; })
                 .attr("y", this.BREADCRUMB_DIMENSIONS.height / 2)
                 .attr("dy", "0.35em")
                 .attr("class", function (d) { return ("breadcrumb text " + _this.getSegmentDescription(d.segmentId).cssClass); })
                 .text(function (d) { return d.displayName; });
-            breadcrumbs.exit().transition().remove();
-            breadcrumbs.call(this.dragSource, DrageObjectType.Breadcrumb, this);
             var availableSegments = this.getAvailableSegments(data.xAxisSegmentId);
             var availableSegmentsG = availableSegmentsGroup
                 .selectAll(".availableSegment")
@@ -433,7 +449,6 @@ define(["require", "exports"], function (require, exports) {
                 .append("g")
                 .attr("class", function (d) { return ("availableSegment " + d.cssClass); })
                 .call(this.dragTarget, DrageObjectType.AvailableSegment, self);
-            //.attr("class", d=> ("availableSegment"));
             availableSegEnter.append("rect");
             availableSegmentsG.select("rect")
                 .transition()

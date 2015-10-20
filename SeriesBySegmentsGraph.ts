@@ -233,8 +233,6 @@ export class Painter {
 
         var breadcrumbsTop = (this.CONTROL_MARGINS.top + this.BREADCRUMBS_MARGINS.top);
 
-        var breadcrubmesGroup = d3.select("#breadcrumbsGroup" + this._chartUniqueSuffix)
-            .attr("transform", "translate(" + (this.BREADCRUMBS_MARGINS.left + this.CONTROL_MARGINS.left) + "," + breadcrumbsTop + ")");
 
         var chartWidth = containerWidth - this.CONTROL_MARGINS.left - this.CONTROL_MARGINS.right,
             chartHeight = containerHeight
@@ -270,13 +268,13 @@ export class Painter {
             d3.max(
                 data.segments.map(seg=>
                 { return d3.max(seg.dataItems.map(itm=> itm.value)); }
-                ));
+                    ));
 
         this._xScale.domain(data.segments.map(d=> this.getSegmentValueId(d.segment)));
         this._yScale.domain([0, maxValue]);
 
         var self = this;
-        this._xAxis.tickFormat(function (segKey): string {
+        this._xAxis.tickFormat(function(segKey): string {
             var length = data.segments.length;
             for (var index = 0; index < length; index++) {
                 var element = data.segments[index];
@@ -286,7 +284,7 @@ export class Painter {
             }
             return "err";
         }
-        );
+            );
 
         var xAxis = d3.select("#xAxis" + this._chartUniqueSuffix)
             .attr("transform", "translate(0," + chartHeight + ")")
@@ -332,8 +330,6 @@ export class Painter {
         var segments = contentG.selectAll(".segment")
             .data(data.segments, seg=> this.getSegmentValueId(seg.segment));
 
-
-
         segments.enter()
             .append("g")
             .attr("class", "segment");
@@ -346,21 +342,21 @@ export class Painter {
 
         var self = this;
         var overlayDrag = d3.behavior.drag()
-            .on("dragstart", function () {
+            .on("dragstart", function() {
                 self.setDragStartPostion();
             })
-            .on("drag", function () {
+            .on("drag", function() {
                 self.dragChart(widthOfAllData, chartWidth, chartHeight);
             })
-            .on("dragend", function () {
+            .on("dragend", function() {
                 self.dragChartEnd(this);
             });
 
         var segmentDrag = d3.behavior.drag()
-            .on("dragstart", function () {
+            .on("dragstart", function() {
                 self.dragChartStart(this);
             })
-            .on("drag", function () {
+            .on("drag", function() {
                 var chartBaseCoordinates = d3.mouse(svg.node())
                 var x = chartBaseCoordinates[0];
                 var y = chartBaseCoordinates[1];
@@ -368,7 +364,7 @@ export class Painter {
                     .attr("transform", "translate(" + (x - 0) + "," + (y - 0) + ")");
                 self.dragChart(widthOfAllData, chartWidth, chartHeight);
             })
-            .on("dragend", function () {
+            .on("dragend", function() {
                 self.dragChartEnd(this);
                 /*
                 if (self._dragTarget == null) {
@@ -393,45 +389,45 @@ export class Painter {
                 }
                 */
             });
+        /*
+    var zoom = d3.behavior.zoom().scaleExtent([chartWidth / widthOfAllData, chartWidth / (startupSegmentWidth * 2)]).on("zoom", () => {
+        var scale = (<any>d3.event).scale;
+        var translateX: number = (<any>d3.event).translate[0];
+        var translateY: number = (<any>d3.event).translate[1];
+        // Prevent data from moving away from y axis:
+        translateX = translateX > 0 ? 0 : translateX;
+        var maxTranslateX = widthOfAllData * scale - chartWidth;
+        translateX = translateX < (-maxTranslateX) ? (-maxTranslateX) : translateX;
+        var segmentsA = contentG.selectAll(".segment")
+        segmentsA.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)")
+        svg.select(".x.axis")
+            .attr("transform", "translate(" + translateX + "," + (chartHeight) + ")")
+            .call(self._xAxis.scale(self._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
 
-        var zoom = d3.behavior.zoom().scaleExtent([chartWidth / widthOfAllData, chartWidth / (startupSegmentWidth * 2)]).on("zoom", () => {
-            var scale = (<any>d3.event).scale;
-            var translateX: number = (<any>d3.event).translate[0];
-            var translateY: number = (<any>d3.event).translate[1];
-            // Prevent data from moving away from y axis:
-            translateX = translateX > 0 ? 0 : translateX;
-            var maxTranslateX = widthOfAllData * scale - chartWidth;
-            translateX = translateX < (-maxTranslateX) ? (-maxTranslateX) : translateX;
-            var segmentsA = contentG.selectAll(".segment")
-            segmentsA.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)")
-            svg.select(".x.axis")
-                .attr("transform", "translate(" + translateX + "," + (chartHeight) + ")")
-                .call(self._xAxis.scale(self._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
+        var isRealZoomEvent: boolean =
+            self._lastZoomScale != scale
+            || self._lastZoomtanslateX != translateX
+            || self._lastZoomtanslateY != translateY;
+        if (isRealZoomEvent) {
+            self._lastZoomTime = Date.now();
+            self._lastZoomScale = scale;
+            self._lastZoomtanslateX = translateX;
+            self._lastZoomtanslateY = translateY;
+        }
+        //this._tooltip.hide();
+    });
 
-            var isRealZoomEvent: boolean =
-                self._lastZoomScale != scale
-                || self._lastZoomtanslateX != translateX
-                || self._lastZoomtanslateY != translateY;
-            if (isRealZoomEvent) {
-                self._lastZoomTime = Date.now();
-                self._lastZoomScale = scale;
-                self._lastZoomtanslateX = translateX;
-                self._lastZoomtanslateY = translateY;
-            }
-            //this._tooltip.hide();
-        });
-
-        this._tooltip = d3.tip<fullDataItem>()
-            .attr('class', 'd3-tip')
-            .offset([-10, 0])
-            .html(
-            d=> "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"
-            );
-
+    this._tooltip = d3.tip<fullDataItem>()
+        .attr('class', 'd3-tip')
+        .offset([-10, 0])
+        .html(
+        d=> "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"
+        );
+*/
         var bars = segments.selectAll("rect")
             .data(
-            sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
-            itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
+                sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
+                itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
 
 		/*
 				bars.on("click", () => {
@@ -447,7 +443,9 @@ export class Painter {
 
         bars.enter()
             .append("rect")
-            .attr("class", itm=> this.getSeries(itm.dataItem.seriesId).cssClass)
+            .attr("class", itm=> this.getSeries(itm.dataItem.seriesId).cssClass);
+
+        bars
             .attr("x", barEnterStartX)
             .attr("y", barEnterStartY)
             .transition().duration(1500)
@@ -462,55 +460,60 @@ export class Painter {
         ;
         bars.exit().remove();
 
-        bars.on("mouseover", function () {
+        bars.on("mouseover", function() {
             var v = 3;
         });
 
         segments.call(this.dragTarget, DrageObjectType.ChartSegment, this);
 
-        //segments.on("click.drag", () => d3.event.stopPropagation());
-        var self = this;
-        segments.on("click",
-            (function (seg) {
-                // Animate clicked segemtn to reload animation:
-				/*
-				d3.select(<Node>this)
-					.transition()
-					.attr("transform", "rotate(30)")
-				*/
-                if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
-                    return;
-                }
-                self._currentFilteringSegments.push(seg.segment);
+        /*
+                //segments.on("click.drag", () => d3.event.stopPropagation());
+                var self = this;
+                segments.on("click",
+                    (function(seg) {
+                        // Animate clicked segemtn to reload animation:
+                    	
+                        d3.select(<Node>this)
+                            .transition()
+                            .attr("transform", "rotate(30)")
+                    	
+                        if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
+                            return;
+                        }
+                        self._currentFilteringSegments.push(seg.segment);
+        
+                        var requestParams: SegmentRequestParams = {
+                            requestedSegmentId: "item",
+                            filterSegments: self._currentFilteringSegments,
+                            date: null
+                        };
+                        var newData = self._dataCallback(requestParams)
+                        self._clickX = d3.event.x;
+                        self.drawData(newData);
+        
+                    })
+                    );
+        */
 
-                var requestParams: SegmentRequestParams = {
-                    requestedSegmentId: "item",
-                    filterSegments: self._currentFilteringSegments,
-                    date: null
-                };
-                var newData = self._dataCallback(requestParams)
-                self._clickX = d3.event.x;
-                self.drawData(newData);
+        var breadcrubmesGroup = d3.select("#breadcrumbsGroup" + this._chartUniqueSuffix)
+            .attr("transform", "translate(" + (this.BREADCRUMBS_MARGINS.left + this.CONTROL_MARGINS.left) + "," + breadcrumbsTop + ")");
 
-            })
-        );
+        var breadcrumbWrapperGroups =
+            breadcrubmesGroup.selectAll("g.breadcrumb")
+                .data(this._currentFilteringSegments, seg=> this.getSegmentValueId(seg));
 
+        breadcrumbWrapperGroups.exit().transition().remove();
 
-
-        var breadcrumbs = breadcrubmesGroup
-            .selectAll(".breadcrumb")
-            .data(this._currentFilteringSegments, seg=> this.getSegmentValueId(seg));
-
-        var crumbEnter = breadcrumbs.enter()
+        var crumbEnter = breadcrumbWrapperGroups.enter()
             .append("g")
-        // todo add class for specific segment
-            .attr("class", d=> ("breadcrumb " + this.getSegmentDescription(d.segmentId).cssClass));
-        //crumb.append("rect")
-        //    .attr("x", (d, i) => i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing))
-        //    .attr("width", this.BREADCRUMB_DIMENSIONS.width)
-        //    .attr("height", this.BREADCRUMB_DIMENSIONS.height);
+            .attr("class", d=> ("breadcrumb " + this.getSegmentDescription(d.segmentId).cssClass))
+            .call(this.dragSource, DrageObjectType.Breadcrumb, this);;
 
-        crumbEnter.append("polygon")
+        crumbEnter.append("polygon");
+
+        breadcrumbWrapperGroups
+            .select("polygon")
+            .transition()
             .attr("points", (d, i) => {
                 var beradcrumbStart = i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing);
                 var points = [];
@@ -526,17 +529,16 @@ export class Painter {
             })
         //.style("fill", function (d) { return colors[d.name]; });
 
-        crumbEnter.append("text")
+        crumbEnter.append("text");
+
+        breadcrumbWrapperGroups
+            .select("text")
+            .transition()
             .attr("x", (d, i) => i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing) + this.BREADCRUMB_DIMENSIONS.tip + this.BREADCRUMB_DIMENSIONS.textSpacing)
             .attr("y", this.BREADCRUMB_DIMENSIONS.height / 2)
             .attr("dy", "0.35em")
             .attr("class", d=> ("breadcrumb text " + this.getSegmentDescription(d.segmentId).cssClass))
-        //    .classed("text", true)
             .text(d=> d.displayName);
-
-        breadcrumbs.exit().transition().remove();
-
-        breadcrumbs.call(this.dragSource, DrageObjectType.Breadcrumb, this);
 
         var availableSegments = this.getAvailableSegments(data.xAxisSegmentId);
 
@@ -549,11 +551,8 @@ export class Painter {
 
         var availableSegEnter = availableSegmentsG.enter()
             .append("g")
-        //.attr("x", (d, i) => i * 100 + 10)
-        // todo add class for specific segment
             .attr("class", d=> ("availableSegment " + d.cssClass))
             .call(this.dragTarget, DrageObjectType.AvailableSegment, self);
-        //.attr("class", d=> ("availableSegment"));
 
         availableSegEnter.append("rect");
 
@@ -589,9 +588,9 @@ export class Painter {
             .attr("id", "currentSegmentContainer" + this._chartUniqueSuffix)
             .attr("transform", "translate("
             //+ (this.CONTROL_MARGINS.left + chartWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
-            + (containerWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
-            + ","
-            + (availableSegmentsTop - this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing - this.AVAILABLE_SEGMENTS_DIMENSIONS.height) + ")")
+                + (containerWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
+                + ","
+                + (availableSegmentsTop - this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing - this.AVAILABLE_SEGMENTS_DIMENSIONS.height) + ")")
             .append("g")
             .data(this._segmentDescriptions.filter(seg=> seg.id == data.xAxisSegmentId))
             .attr("id", "currentSegment" + this._chartUniqueSuffix)
@@ -635,7 +634,7 @@ export class Painter {
                 segments.splice(segments.indexOf(filterSegment[0]), 1);
             }
         }
-        );
+            );
         var filterSegment = segments.filter(seg=> seg.id == xAxisSegmentId);
         segments.splice(segments.indexOf(filterSegment[0]), 1);
         return segments;
@@ -710,13 +709,13 @@ export class Painter {
 
     private dragSource<Datum>(source: d3.Selection<Datum>, drageSourceType: DrageObjectType, self: Painter): d3.Selection<Datum> {
         var drag = d3.behavior.drag()
-            .on("dragstart", function () {
+            .on("dragstart", function() {
                 self.dragStart(self, this, drageSourceType);
             })
-            .on("drag", function () {
+            .on("drag", function() {
                 self.drag(self, this, drageSourceType);
             })
-            .on("dragend", function () {
+            .on("dragend", function() {
                 self.dragEnd(self, this, drageSourceType);
             });
 
