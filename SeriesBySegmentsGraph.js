@@ -86,7 +86,7 @@ define(["require", "exports"], function (require, exports) {
     exports.TimelineData = TimelineData;
     var Painter = (function () {
         function Painter() {
-            this.STRTUP_BAR_WIDTH = 35;
+            this.STARTUP_BAR_WIDTH = 25;
             this.MARGIN_BETWEEN_BAR_GROUPS = 0.1;
             /**
              * Zoom based on dragging the chard also invokes the click event.
@@ -94,13 +94,14 @@ define(["require", "exports"], function (require, exports) {
             */
             this.ZOOM_CLICK_AVOID_DELAY = 500;
             this.CONTROL_MARGINS = { top: 20, right: 20, bottom: 20, left: 40 };
+            this.BREADCRUMB_DRAG_TO_DELETE_DISTANCE = 80;
             this.BREADCRUMBS_MARGINS = { top: 0, right: 0, bottom: 20, left: 0 };
             this.BREADCRUMB_DIMENSIONS = {
-                width: 75, height: 30, spacing: 3, tip: 10
+                width: 75, height: 30, spacing: 3, tip: 10, textSpacing: 2
             };
             this.AVAILABLE_SEGMENTS_MARGINS = { top: 20, right: 0, bottom: 0, left: 0 };
             this.AVAILABLE_SEGMENTS_DIMENSIONS = {
-                width: 75, height: 30, spacing: 3, tip: 10
+                width: 75, height: 30, spacing: 3, textSpacing: 2, rounding: 3
             };
             this._self = this;
             this._clickX = -1;
@@ -180,6 +181,7 @@ define(["require", "exports"], function (require, exports) {
         Painter.prototype.drawData = function (data) {
             var _this = this;
             this._segementsXTransfomation = 0;
+            this._currentXSegmentId = data.xAxisSegmentId;
             var container = d3.select(this._chartContainer);
             var containerWidth = +container.attr("width"), containerHeight = +container.attr("height");
             var svg = container.select("#controlSvg" + this._chartUniqueSuffix)
@@ -203,7 +205,7 @@ define(["require", "exports"], function (require, exports) {
             var chartGroup = svg.select("#chartGroup" + this._chartUniqueSuffix)
                 .attr("transform", "translate(" + this.CONTROL_MARGINS.left + "," + chartTop + ")");
             var itemsPerSegment = d3.max(data.segments.map(function (seg) { return seg.dataItems.length; }));
-            var startupSegmentWidth = itemsPerSegment * this.STRTUP_BAR_WIDTH * (1 + 2 * this.MARGIN_BETWEEN_BAR_GROUPS);
+            var startupSegmentWidth = itemsPerSegment * this.STARTUP_BAR_WIDTH * (1 + 2 * this.MARGIN_BETWEEN_BAR_GROUPS);
             var widthOfAllData = startupSegmentWidth * data.segments.length;
             var overlay = d3.select("#overlay" + this._chartUniqueSuffix)
                 .attr("width", chartWidth)
@@ -255,11 +257,7 @@ define(["require", "exports"], function (require, exports) {
             var contentG = d3.select("#contentGroup" + this._chartUniqueSuffix);
             contentG.attr("clip-path", "url(#chartClipPath" + this._chartUniqueSuffix + ")");
             var segments = contentG.selectAll(".segment")
-                .data(data.segments, function (seg) { return _this.getSegmentValueId(seg.segment); })
-                .call(this.dragTarget, DrageObjectType.ChartSegment, this)
-                .on("mouseover", function () {
-                var v = 3;
-            });
+                .data(data.segments, function (seg) { return _this.getSegmentValueId(seg.segment); });
             segments.enter()
                 .append("g")
                 .attr("class", "segment");
@@ -292,24 +290,28 @@ define(["require", "exports"], function (require, exports) {
             })
                 .on("dragend", function () {
                 self.dragChartEnd(this);
+                /*
                 if (self._dragTarget == null) {
                     return;
                 }
+
                 var targetSelection = d3.select(self._dragTarget);
                 if (self._drageTargetType == DrageObjectType.AvailableSegment) {
                     if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
                         return;
                     }
                     self._currentFilteringSegments.push(d3.select(this).datum().segment);
-                    var requestParams = {
+
+                    var requestParams: SegmentRequestParams = {
                         requestedSegmentId: self._dragTarget.id,
                         filterSegments: self._currentFilteringSegments,
                         date: null
                     };
-                    var newData = self._dataCallback(requestParams);
+                    var newData = self._dataCallback(requestParams)
                     self._clickX = d3.event.x;
                     self.drawData(newData);
                 }
+                */
             });
             var zoom = d3.behavior.zoom().scaleExtent([chartWidth / widthOfAllData, chartWidth / (startupSegmentWidth * 2)]).on("zoom", function () {
                 var scale = d3.event.scale;
@@ -340,10 +342,7 @@ define(["require", "exports"], function (require, exports) {
                 .offset([-10, 0])
                 .html(function (d) { return "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"; });
             var bars = segments.selectAll("rect")
-                .data(function (sdi) { return sdi.dataItems.map(function (dataItem) { return { dataItem: dataItem, segment: sdi }; }); }, function (itm) { return _this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId; })
-                .on("mouseover", function () {
-                var v = 3;
-            });
+                .data(function (sdi) { return sdi.dataItems.map(function (dataItem) { return { dataItem: dataItem, segment: sdi }; }); }, function (itm) { return _this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId; });
             /*
                     bars.on("click", () => {
                         var v = [];
@@ -366,6 +365,10 @@ define(["require", "exports"], function (require, exports) {
                 .attr("data-ziv-val", function (itm) { return itm.dataItem.value; })
                 .attr("height", function (itm) { return chartHeight - _this._yScale(itm.dataItem.value); });
             bars.exit().remove();
+            bars.on("mouseover", function () {
+                var v = 3;
+            });
+            segments.call(this.dragTarget, DrageObjectType.ChartSegment, this);
             //segments.on("click.drag", () => d3.event.stopPropagation());
             var self = this;
             segments.on("click", (function (seg) {
@@ -391,19 +394,36 @@ define(["require", "exports"], function (require, exports) {
             var breadcrumbs = breadcrubmesGroup
                 .selectAll(".breadcrumb")
                 .data(this._currentFilteringSegments, function (seg) { return _this.getSegmentValueId(seg); });
-            var crumb = breadcrumbs.enter()
+            var crumbEnter = breadcrumbs.enter()
                 .append("g")
                 .attr("class", function (d) { return ("breadcrumb " + _this.getSegmentDescription(d.segmentId).cssClass); });
-            crumb.append("rect")
-                .attr("x", function (d, i) { return i * (_this.BREADCRUMB_DIMENSIONS.width + _this.BREADCRUMB_DIMENSIONS.spacing); })
-                .attr("width", this.BREADCRUMB_DIMENSIONS.width)
-                .attr("height", this.BREADCRUMB_DIMENSIONS.height);
-            crumb.append("text")
-                .attr("x", function (d, i) { return i * (_this.BREADCRUMB_DIMENSIONS.width + _this.BREADCRUMB_DIMENSIONS.spacing); })
-                .attr("y", 5)
-                .attr("dy", 4)
+            //crumb.append("rect")
+            //    .attr("x", (d, i) => i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing))
+            //    .attr("width", this.BREADCRUMB_DIMENSIONS.width)
+            //    .attr("height", this.BREADCRUMB_DIMENSIONS.height);
+            crumbEnter.append("polygon")
+                .attr("points", function (d, i) {
+                var beradcrumbStart = i * (_this.BREADCRUMB_DIMENSIONS.width + _this.BREADCRUMB_DIMENSIONS.spacing);
+                var points = [];
+                points.push("" + beradcrumbStart + ",0");
+                points.push((beradcrumbStart + _this.BREADCRUMB_DIMENSIONS.width) + ",0");
+                points.push(beradcrumbStart + _this.BREADCRUMB_DIMENSIONS.width + _this.BREADCRUMB_DIMENSIONS.tip + "," + (_this.BREADCRUMB_DIMENSIONS.height / 2));
+                points.push(beradcrumbStart + _this.BREADCRUMB_DIMENSIONS.width + "," + _this.BREADCRUMB_DIMENSIONS.height);
+                points.push("" + beradcrumbStart + "," + _this.BREADCRUMB_DIMENSIONS.height);
+                if (i > 0) {
+                    points.push(beradcrumbStart + _this.BREADCRUMB_DIMENSIONS.tip + "," + (_this.BREADCRUMB_DIMENSIONS.height / 2));
+                }
+                return points.join(" ");
+            });
+            //.style("fill", function (d) { return colors[d.name]; });
+            crumbEnter.append("text")
+                .attr("x", function (d, i) { return i * (_this.BREADCRUMB_DIMENSIONS.width + _this.BREADCRUMB_DIMENSIONS.spacing) + _this.BREADCRUMB_DIMENSIONS.tip + _this.BREADCRUMB_DIMENSIONS.textSpacing; })
+                .attr("y", this.BREADCRUMB_DIMENSIONS.height / 2)
+                .attr("dy", "0.35em")
                 .attr("class", function (d) { return ("breadcrumb text " + _this.getSegmentDescription(d.segmentId).cssClass); })
                 .text(function (d) { return d.displayName; });
+            breadcrumbs.exit().transition().remove();
+            breadcrumbs.call(this.dragSource, DrageObjectType.Breadcrumb, this);
             var availableSegments = this.getAvailableSegments(data.xAxisSegmentId);
             var availableSegmentsG = availableSegmentsGroup
                 .selectAll(".availableSegment")
@@ -418,13 +438,15 @@ define(["require", "exports"], function (require, exports) {
             availableSegmentsG.select("rect")
                 .transition()
                 .attr("x", function (d, i) { return i * (_this.AVAILABLE_SEGMENTS_DIMENSIONS.width + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing); })
+                .attr("rx", this.AVAILABLE_SEGMENTS_DIMENSIONS.rounding)
+                .attr("ry", this.AVAILABLE_SEGMENTS_DIMENSIONS.rounding)
                 .attr("width", this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
                 .attr("height", this.AVAILABLE_SEGMENTS_DIMENSIONS.height);
             availableSegEnter.append("text");
             availableSegmentsG.select("text")
                 .transition()
-                .attr("x", function (d, i) { return i * (_this.AVAILABLE_SEGMENTS_DIMENSIONS.width + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing); })
-                .attr("y", 5)
+                .attr("x", function (d, i) { return i * (_this.AVAILABLE_SEGMENTS_DIMENSIONS.width + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing) + _this.AVAILABLE_SEGMENTS_DIMENSIONS.textSpacing; })
+                .attr("y", this.AVAILABLE_SEGMENTS_DIMENSIONS.height / 2)
                 .attr("dy", 4)
                 .attr("class", function (d) { return ("availableSegment text " + d.cssClass); })
                 .text(function (d) { return d.displayName; });
@@ -437,23 +459,27 @@ define(["require", "exports"], function (require, exports) {
             d3.select("#currentSegmentContainer" + this._chartUniqueSuffix).remove();
             var currentSegmentGroup = svg.append("g")
                 .attr("id", "currentSegmentContainer" + this._chartUniqueSuffix)
-                .attr("transform", "translate(" + (this.CONTROL_MARGINS.left + chartWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width) + "," + (availableSegmentsTop - this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing - this.AVAILABLE_SEGMENTS_DIMENSIONS.height) + ")")
+                .attr("transform", "translate("
+                + (containerWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
+                + ","
+                + (availableSegmentsTop - this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing - this.AVAILABLE_SEGMENTS_DIMENSIONS.height) + ")")
                 .append("g")
                 .data(this._segmentDescriptions.filter(function (seg) { return seg.id == data.xAxisSegmentId; }))
                 .attr("id", "currentSegment" + this._chartUniqueSuffix)
                 .attr("class", function (d) { return ("currentSegment " + d.cssClass); })
                 .call(this.dragTarget, DrageObjectType.CurrentXAxisSegment, this)
                 .call(this.dragSource, DrageObjectType.CurrentXAxisSegment, this);
-            //.enter();
             currentSegmentGroup.append("rect")
                 .transition()
-                .attr("x", function (d, i) { return i * (_this.AVAILABLE_SEGMENTS_DIMENSIONS.width + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing); })
+                .attr("x", function (d, i) { return i * (_this.AVAILABLE_SEGMENTS_DIMENSIONS.width + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing + _this.CONTROL_MARGINS.left); })
+                .attr("rx", this.AVAILABLE_SEGMENTS_DIMENSIONS.rounding)
+                .attr("ry", this.AVAILABLE_SEGMENTS_DIMENSIONS.rounding)
                 .attr("width", this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
                 .attr("height", this.AVAILABLE_SEGMENTS_DIMENSIONS.height);
             currentSegmentGroup.append("text")
                 .transition()
-                .attr("x", function (d, i) { return i * (_this.AVAILABLE_SEGMENTS_DIMENSIONS.width + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing); })
-                .attr("y", 5)
+                .attr("x", function (d, i) { return i * (_this.AVAILABLE_SEGMENTS_DIMENSIONS.width + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing) + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing; })
+                .attr("y", this.AVAILABLE_SEGMENTS_DIMENSIONS.height / 2)
                 .attr("dy", 4)
                 .attr("class", function (d) { return ("currentSegment text " + d.cssClass); })
                 .text(function (d) { return d.displayName; });
@@ -570,10 +596,36 @@ define(["require", "exports"], function (require, exports) {
         Painter.prototype.dragEnd = function (self, drageSource, dragSourceType) {
             d3.select(drageSource).style("pointer-events", "all");
             self.unmarkDragTragets(dragSourceType);
+            if (dragSourceType == DrageObjectType.Breadcrumb) {
+                var svg = d3.select("#controlSvg" + this._chartUniqueSuffix);
+                var chartBaseCoordinates = d3.mouse(svg.node());
+                var x = chartBaseCoordinates[0];
+                var y = chartBaseCoordinates[1];
+                var dx = x - this._dragStartPosition[0];
+                var dy = y - this._dragStartPosition[1];
+                var dragDistance = Math.sqrt(dx * dx + dy * dy);
+                if (dragDistance > this.BREADCRUMB_DRAG_TO_DELETE_DISTANCE) {
+                    var seg = this._dragSource;
+                    var index = this._currentFilteringSegments.indexOf(seg);
+                    this._currentFilteringSegments.splice(index, 1);
+                    var requestParams = {
+                        requestedSegmentId: self._currentXSegmentId,
+                        filterSegments: this._currentFilteringSegments,
+                        date: null
+                    };
+                    var newData = this._dataCallback(requestParams);
+                    //self._clickX = d3.event.x;
+                    this.drawData(newData);
+                    return;
+                }
+            }
             switch (self._drageTargetType) {
                 case DrageObjectType.CurrentXAxisSegment:
                     if (dragSourceType == DrageObjectType.AvailableSegment) {
                         this.changeCurrentSegmentWithAvailablSegment(self._dragTarget, self._dragSource);
+                    }
+                    else {
+                        this.returnDragSourceToOriginalPosition(drageSource);
                     }
                     break;
                 case DrageObjectType.AvailableSegment:
@@ -582,29 +634,36 @@ define(["require", "exports"], function (require, exports) {
                             this.changeCurrentSegmentWithAvailablSegment(self._dragSource, self._dragTarget);
                             break;
                         case DrageObjectType.ChartSegment:
-                            //this.drillDownToSegment(self.dra);
+                            this.drillDownToSegment(self._dragSource, self._dragTarget);
                             break;
                         default:
+                            this.returnDragSourceToOriginalPosition(drageSource);
                             break;
                     }
                     break;
                 case DrageObjectType.ChartSegment:
                     if (dragSourceType == DrageObjectType.AvailableSegment) {
-                        this.drillDownToSegment(d3.select(self._dragTarget).datum(), d3.select(self._dragSource).datum());
+                        this.drillDownToSegment(self._dragTarget, self._dragSource);
+                    }
+                    else {
+                        this.returnDragSourceToOriginalPosition(drageSource);
                     }
                     break;
                 case DrageObjectType.None:
                 default:
-                    d3.select(drageSource)
-                        .transition()
-                        .attr("transform", "translate(0,0)");
+                    this.returnDragSourceToOriginalPosition(drageSource);
                     break;
             }
             self._drageSourceType = DrageObjectType.None;
             self._dragSource = null;
         };
+        Painter.prototype.returnDragSourceToOriginalPosition = function (dragSource) {
+            d3.select(dragSource)
+                .transition()
+                .attr("transform", "translate(0,0)");
+        };
         Painter.prototype.drillDownToSegment = function (drilledSegment, newXAxisSegment) {
-            this._currentFilteringSegments.push(drilledSegment);
+            this._currentFilteringSegments.push(drilledSegment.segment);
             var requestParams = {
                 requestedSegmentId: newXAxisSegment.id,
                 filterSegments: this._currentFilteringSegments,
@@ -655,8 +714,17 @@ define(["require", "exports"], function (require, exports) {
                     break;
             }
         };
-        Painter.prototype.isSegmentDescription = function (target) {
-            return true;
+        Painter.prototype.breadcrumbPoints = function (d, i) {
+            var points = [];
+            points.push("0,0");
+            points.push(this.BREADCRUMB_DIMENSIONS.width + ",0");
+            points.push(this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.tip + "," + (this.BREADCRUMB_DIMENSIONS.height / 2));
+            points.push(this.BREADCRUMB_DIMENSIONS.width + "," + this.BREADCRUMB_DIMENSIONS.height);
+            points.push("0," + this.BREADCRUMB_DIMENSIONS.height);
+            if (i > 0) {
+                points.push(this.BREADCRUMB_DIMENSIONS.tip + "," + (this.BREADCRUMB_DIMENSIONS.height / 2));
+            }
+            return points.join(" ");
         };
         return Painter;
     })();
@@ -667,6 +735,7 @@ define(["require", "exports"], function (require, exports) {
         DrageObjectType[DrageObjectType["ChartSegment"] = 1] = "ChartSegment";
         DrageObjectType[DrageObjectType["AvailableSegment"] = 2] = "AvailableSegment";
         DrageObjectType[DrageObjectType["CurrentXAxisSegment"] = 3] = "CurrentXAxisSegment";
+        DrageObjectType[DrageObjectType["Breadcrumb"] = 4] = "Breadcrumb";
     })(DrageObjectType || (DrageObjectType = {}));
 });
 //# sourceMappingURL=SeriesBySegmentsGraph.js.map

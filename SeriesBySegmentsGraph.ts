@@ -93,7 +93,7 @@ export class TimelineData extends RetrivedData {
 
 
 export class Painter {
-    private STRTUP_BAR_WIDTH: number = 35;
+    private STARTUP_BAR_WIDTH: number = 25;
     private MARGIN_BETWEEN_BAR_GROUPS: number = 0.1;
 	/** 
 	 * Zoom based on dragging the chard also invokes the click event.
@@ -102,13 +102,14 @@ export class Painter {
     private ZOOM_CLICK_AVOID_DELAY: number = 500;
 
     private CONTROL_MARGINS = { top: 20, right: 20, bottom: 20, left: 40 };
+    private BREADCRUMB_DRAG_TO_DELETE_DISTANCE = 80;
     private BREADCRUMBS_MARGINS = { top: 0, right: 0, bottom: 20, left: 0 };
     private BREADCRUMB_DIMENSIONS = {
-        width: 75, height: 30, spacing: 3, tip: 10
+        width: 75, height: 30, spacing: 3, tip: 10, textSpacing: 2
     };
     private AVAILABLE_SEGMENTS_MARGINS = { top: 20, right: 0, bottom: 0, left: 0 };
     private AVAILABLE_SEGMENTS_DIMENSIONS = {
-        width: 75, height: 30, spacing: 3, tip: 10
+        width: 75, height: 30, spacing: 3, textSpacing: 2, rounding: 3
     };
 
     private _self = this;
@@ -138,6 +139,8 @@ export class Painter {
     private _drageTargetType: DrageObjectType = DrageObjectType.None;
     private _dragSource: any = null;
     private _drageSourceType: DrageObjectType = DrageObjectType.None;
+
+    private _currentXSegmentId: string;
 
     setup(
         seriesDescriptions: SeriesDescription[],
@@ -218,6 +221,7 @@ export class Painter {
 
     drawData(data: SegmentsData) {
         this._segementsXTransfomation = 0;
+        this._currentXSegmentId = data.xAxisSegmentId;
         var container = d3.select(this._chartContainer);
 
         var containerWidth: number = +container.attr("width"),
@@ -252,7 +256,7 @@ export class Painter {
 
 
         var itemsPerSegment = d3.max(data.segments.map(seg=> seg.dataItems.length));
-        var startupSegmentWidth = itemsPerSegment * this.STRTUP_BAR_WIDTH * (1 + 2 * this.MARGIN_BETWEEN_BAR_GROUPS);
+        var startupSegmentWidth = itemsPerSegment * this.STARTUP_BAR_WIDTH * (1 + 2 * this.MARGIN_BETWEEN_BAR_GROUPS);
         var widthOfAllData = startupSegmentWidth * data.segments.length;
 
         var overlay = d3.select("#overlay" + this._chartUniqueSuffix)
@@ -272,7 +276,7 @@ export class Painter {
         this._yScale.domain([0, maxValue]);
 
         var self = this;
-        this._xAxis.tickFormat(function(segKey): string {
+        this._xAxis.tickFormat(function (segKey): string {
             var length = data.segments.length;
             for (var index = 0; index < length; index++) {
                 var element = data.segments[index];
@@ -326,11 +330,8 @@ export class Painter {
         contentG.attr("clip-path", "url(#chartClipPath" + this._chartUniqueSuffix + ")");
 
         var segments = contentG.selectAll(".segment")
-            .data(data.segments, seg=> this.getSegmentValueId(seg.segment))
-            .call(this.dragTarget, DrageObjectType.ChartSegment, this)
-            .on("mouseover", function() {
-                var v = 3;
-            })
+            .data(data.segments, seg=> this.getSegmentValueId(seg.segment));
+
 
 
         segments.enter()
@@ -345,21 +346,21 @@ export class Painter {
 
         var self = this;
         var overlayDrag = d3.behavior.drag()
-            .on("dragstart", function() {
+            .on("dragstart", function () {
                 self.setDragStartPostion();
             })
-            .on("drag", function() {
+            .on("drag", function () {
                 self.dragChart(widthOfAllData, chartWidth, chartHeight);
             })
-            .on("dragend", function() {
+            .on("dragend", function () {
                 self.dragChartEnd(this);
             });
 
         var segmentDrag = d3.behavior.drag()
-            .on("dragstart", function() {
+            .on("dragstart", function () {
                 self.dragChartStart(this);
             })
-            .on("drag", function() {
+            .on("drag", function () {
                 var chartBaseCoordinates = d3.mouse(svg.node())
                 var x = chartBaseCoordinates[0];
                 var y = chartBaseCoordinates[1];
@@ -367,9 +368,9 @@ export class Painter {
                     .attr("transform", "translate(" + (x - 0) + "," + (y - 0) + ")");
                 self.dragChart(widthOfAllData, chartWidth, chartHeight);
             })
-            .on("dragend", function() {
+            .on("dragend", function () {
                 self.dragChartEnd(this);
-
+                /*
                 if (self._dragTarget == null) {
                     return;
                 }
@@ -390,6 +391,7 @@ export class Painter {
                     self._clickX = d3.event.x;
                     self.drawData(newData);
                 }
+                */
             });
 
         var zoom = d3.behavior.zoom().scaleExtent([chartWidth / widthOfAllData, chartWidth / (startupSegmentWidth * 2)]).on("zoom", () => {
@@ -429,10 +431,8 @@ export class Painter {
         var bars = segments.selectAll("rect")
             .data(
             sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
-            itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId)
-            .on("mouseover", function() {
-                var v = 3;
-            });
+            itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
+
 		/*
 				bars.on("click", () => {
 					var v = [];
@@ -462,10 +462,16 @@ export class Painter {
         ;
         bars.exit().remove();
 
+        bars.on("mouseover", function () {
+            var v = 3;
+        });
+
+        segments.call(this.dragTarget, DrageObjectType.ChartSegment, this);
+
         //segments.on("click.drag", () => d3.event.stopPropagation());
         var self = this;
         segments.on("click",
-            (function(seg) {
+            (function (seg) {
                 // Animate clicked segemtn to reload animation:
 				/*
 				d3.select(<Node>this)
@@ -495,24 +501,44 @@ export class Painter {
             .selectAll(".breadcrumb")
             .data(this._currentFilteringSegments, seg=> this.getSegmentValueId(seg));
 
-        var crumb = breadcrumbs.enter()
+        var crumbEnter = breadcrumbs.enter()
             .append("g")
         // todo add class for specific segment
             .attr("class", d=> ("breadcrumb " + this.getSegmentDescription(d.segmentId).cssClass));
-        crumb.append("rect")
-            .attr("x", (d, i) => i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing))
-            .attr("width", this.BREADCRUMB_DIMENSIONS.width)
-            .attr("height", this.BREADCRUMB_DIMENSIONS.height);
+        //crumb.append("rect")
+        //    .attr("x", (d, i) => i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing))
+        //    .attr("width", this.BREADCRUMB_DIMENSIONS.width)
+        //    .attr("height", this.BREADCRUMB_DIMENSIONS.height);
 
-        crumb.append("text")
-            .attr("x", (d, i) => i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing))
-            .attr("y", 5)
-            .attr("dy", 4)
+        crumbEnter.append("polygon")
+            .attr("points", (d, i) => {
+                var beradcrumbStart = i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing);
+                var points = [];
+                points.push("" + beradcrumbStart + ",0");
+                points.push((beradcrumbStart + this.BREADCRUMB_DIMENSIONS.width) + ",0");
+                points.push(beradcrumbStart + this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.tip + "," + (this.BREADCRUMB_DIMENSIONS.height / 2));
+                points.push(beradcrumbStart + this.BREADCRUMB_DIMENSIONS.width + "," + this.BREADCRUMB_DIMENSIONS.height);
+                points.push("" + beradcrumbStart + "," + this.BREADCRUMB_DIMENSIONS.height);
+                if (i > 0) { // Leftmost breadcrumb; don't include 6th vertex.
+                    points.push(beradcrumbStart + this.BREADCRUMB_DIMENSIONS.tip + "," + (this.BREADCRUMB_DIMENSIONS.height / 2));
+                }
+                return points.join(" ");
+            })
+        //.style("fill", function (d) { return colors[d.name]; });
+
+        crumbEnter.append("text")
+            .attr("x", (d, i) => i * (this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.spacing) + this.BREADCRUMB_DIMENSIONS.tip + this.BREADCRUMB_DIMENSIONS.textSpacing)
+            .attr("y", this.BREADCRUMB_DIMENSIONS.height / 2)
+            .attr("dy", "0.35em")
             .attr("class", d=> ("breadcrumb text " + this.getSegmentDescription(d.segmentId).cssClass))
+        //    .classed("text", true)
             .text(d=> d.displayName);
 
-        var availableSegments = this.getAvailableSegments(data.xAxisSegmentId);
+        breadcrumbs.exit().transition().remove();
 
+        breadcrumbs.call(this.dragSource, DrageObjectType.Breadcrumb, this);
+
+        var availableSegments = this.getAvailableSegments(data.xAxisSegmentId);
 
         var availableSegmentsG =
             availableSegmentsGroup
@@ -534,6 +560,8 @@ export class Painter {
         availableSegmentsG.select("rect")
             .transition()
             .attr("x", (d, i) => i * (this.AVAILABLE_SEGMENTS_DIMENSIONS.width + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing))
+            .attr("rx", this.AVAILABLE_SEGMENTS_DIMENSIONS.rounding)
+            .attr("ry", this.AVAILABLE_SEGMENTS_DIMENSIONS.rounding)
             .attr("width", this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
             .attr("height", this.AVAILABLE_SEGMENTS_DIMENSIONS.height);
 
@@ -541,8 +569,8 @@ export class Painter {
 
         availableSegmentsG.select("text")
             .transition()
-            .attr("x", (d, i) => i * (this.AVAILABLE_SEGMENTS_DIMENSIONS.width + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing))
-            .attr("y", 5)
+            .attr("x", (d, i) => i * (this.AVAILABLE_SEGMENTS_DIMENSIONS.width + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing) + this.AVAILABLE_SEGMENTS_DIMENSIONS.textSpacing)
+            .attr("y", this.AVAILABLE_SEGMENTS_DIMENSIONS.height / 2)
             .attr("dy", 4)
             .attr("class", d=> ("availableSegment text " + d.cssClass))
             .text(d=> d.displayName);
@@ -559,25 +587,30 @@ export class Painter {
 
         var currentSegmentGroup = svg.append("g")
             .attr("id", "currentSegmentContainer" + this._chartUniqueSuffix)
-            .attr("transform", "translate(" + (this.CONTROL_MARGINS.left + chartWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width) + "," + (availableSegmentsTop - this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing - this.AVAILABLE_SEGMENTS_DIMENSIONS.height) + ")")
+            .attr("transform", "translate("
+            //+ (this.CONTROL_MARGINS.left + chartWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
+            + (containerWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
+            + ","
+            + (availableSegmentsTop - this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing - this.AVAILABLE_SEGMENTS_DIMENSIONS.height) + ")")
             .append("g")
             .data(this._segmentDescriptions.filter(seg=> seg.id == data.xAxisSegmentId))
             .attr("id", "currentSegment" + this._chartUniqueSuffix)
             .attr("class", d=> ("currentSegment " + d.cssClass))
             .call(this.dragTarget, DrageObjectType.CurrentXAxisSegment, this)
             .call(this.dragSource, DrageObjectType.CurrentXAxisSegment, this);
-        //.enter();
 
         currentSegmentGroup.append("rect")
             .transition()
-            .attr("x", (d, i) => i * (this.AVAILABLE_SEGMENTS_DIMENSIONS.width + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing))
+            .attr("x", (d, i) => i * (this.AVAILABLE_SEGMENTS_DIMENSIONS.width + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing + this.CONTROL_MARGINS.left))
+            .attr("rx", this.AVAILABLE_SEGMENTS_DIMENSIONS.rounding)
+            .attr("ry", this.AVAILABLE_SEGMENTS_DIMENSIONS.rounding)
             .attr("width", this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
             .attr("height", this.AVAILABLE_SEGMENTS_DIMENSIONS.height);
 
         currentSegmentGroup.append("text")
             .transition()
-            .attr("x", (d, i) => i * (this.AVAILABLE_SEGMENTS_DIMENSIONS.width + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing))
-            .attr("y", 5)
+            .attr("x", (d, i) => i * (this.AVAILABLE_SEGMENTS_DIMENSIONS.width + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing) + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing)
+            .attr("y", this.AVAILABLE_SEGMENTS_DIMENSIONS.height / 2)
             .attr("dy", 4)
             .attr("class", d=> ("currentSegment text " + d.cssClass))
             .text(d=> d.displayName);
@@ -677,13 +710,13 @@ export class Painter {
 
     private dragSource<Datum>(source: d3.Selection<Datum>, drageSourceType: DrageObjectType, self: Painter): d3.Selection<Datum> {
         var drag = d3.behavior.drag()
-            .on("dragstart", function() {
+            .on("dragstart", function () {
                 self.dragStart(self, this, drageSourceType);
             })
-            .on("drag", function() {
+            .on("drag", function () {
                 self.drag(self, this, drageSourceType);
             })
-            .on("dragend", function() {
+            .on("dragend", function () {
                 self.dragEnd(self, this, drageSourceType);
             });
 
@@ -716,10 +749,37 @@ export class Painter {
         d3.select(drageSource).style("pointer-events", "all");
         self.unmarkDragTragets(dragSourceType);
 
+        if (dragSourceType == DrageObjectType.Breadcrumb) {
+            var svg = d3.select("#controlSvg" + this._chartUniqueSuffix);
+            var chartBaseCoordinates = d3.mouse(svg.node())
+            var x = chartBaseCoordinates[0];
+            var y = chartBaseCoordinates[1];
+            var dx = x - this._dragStartPosition[0];
+            var dy = y - this._dragStartPosition[1];
+            var dragDistance = Math.sqrt(dx * dx + dy * dy);
+            if (dragDistance > this.BREADCRUMB_DRAG_TO_DELETE_DISTANCE) {
+                var seg = <SegmentValueForDisplay>this._dragSource;
+                var index = this._currentFilteringSegments.indexOf(seg);
+                this._currentFilteringSegments.splice(index, 1);
+                var requestParams: SegmentRequestParams = {
+                    requestedSegmentId: self._currentXSegmentId,
+                    filterSegments: this._currentFilteringSegments,
+                    date: null
+                };
+                var newData = this._dataCallback(requestParams)
+                //self._clickX = d3.event.x;
+                this.drawData(newData);
+                return;
+            }
+        }
+
+
         switch (self._drageTargetType) {
             case DrageObjectType.CurrentXAxisSegment:
                 if (dragSourceType == DrageObjectType.AvailableSegment) {
                     this.changeCurrentSegmentWithAvailablSegment(self._dragTarget, self._dragSource);
+                } else {
+                    this.returnDragSourceToOriginalPosition(drageSource);
                 }
                 break;
             case DrageObjectType.AvailableSegment:
@@ -728,24 +788,28 @@ export class Painter {
                         this.changeCurrentSegmentWithAvailablSegment(self._dragSource, self._dragTarget);
                         break;
                     case DrageObjectType.ChartSegment:
-                        //this.drillDownToSegment(self.dra);
+                        this.drillDownToSegment(
+                            <SegmentDataItems>self._dragSource,
+                            <SegmentDescription>self._dragTarget);
                         break;
                     default:
+                        this.returnDragSourceToOriginalPosition(drageSource);
                         break;
                 }
                 break;
             case DrageObjectType.ChartSegment:
                 if (dragSourceType == DrageObjectType.AvailableSegment) {
                     this.drillDownToSegment(
-                        <SegmentValueForDisplay>d3.select(self._dragTarget).datum(),
-                        <SegmentDescription>d3.select(self._dragSource).datum());
+                        <SegmentDataItems>self._dragTarget,
+                        <SegmentDescription>self._dragSource);
+                }
+                else {
+                    this.returnDragSourceToOriginalPosition(drageSource);
                 }
                 break;
             case DrageObjectType.None:
             default:
-                d3.select(drageSource)
-                    .transition()
-                    .attr("transform", "translate(0,0)");
+                this.returnDragSourceToOriginalPosition(drageSource);
                 break;
         }
 
@@ -753,8 +817,15 @@ export class Painter {
         self._dragSource = null;
     }
 
-    private drillDownToSegment(drilledSegment: SegmentValueForDisplay, newXAxisSegment: SegmentDescription) {
-        this._currentFilteringSegments.push(drilledSegment);
+    private returnDragSourceToOriginalPosition(dragSource: any) {
+        d3.select(dragSource)
+            .transition()
+            .attr("transform", "translate(0,0)");
+    }
+
+
+    private drillDownToSegment(drilledSegment: SegmentDataItems, newXAxisSegment: SegmentDescription) {
+        this._currentFilteringSegments.push(drilledSegment.segment);
 
         var requestParams: SegmentRequestParams = {
             requestedSegmentId: newXAxisSegment.id,
@@ -812,12 +883,18 @@ export class Painter {
         }
     }
 
-    private isSegmentDescription(target: any): target is SegmentDescription {
-        return true;
+    private breadcrumbPoints(d, i) {
+        var points = [];
+        points.push("0,0");
+        points.push(this.BREADCRUMB_DIMENSIONS.width + ",0");
+        points.push(this.BREADCRUMB_DIMENSIONS.width + this.BREADCRUMB_DIMENSIONS.tip + "," + (this.BREADCRUMB_DIMENSIONS.height / 2));
+        points.push(this.BREADCRUMB_DIMENSIONS.width + "," + this.BREADCRUMB_DIMENSIONS.height);
+        points.push("0," + this.BREADCRUMB_DIMENSIONS.height);
+        if (i > 0) { // Leftmost breadcrumb; don't include 6th vertex.
+            points.push(this.BREADCRUMB_DIMENSIONS.tip + "," + (this.BREADCRUMB_DIMENSIONS.height / 2));
+        }
+        return points.join(" ");
     }
-
-    //private lightDragTagets
-
 }
 
 
@@ -831,4 +908,5 @@ enum DrageObjectType {
     ChartSegment,
     AvailableSegment,
     CurrentXAxisSegment,
+    Breadcrumb
 }
