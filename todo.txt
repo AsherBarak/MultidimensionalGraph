@@ -1,0 +1,12 @@
+﻿this project is beeing 'put on the ice' for aome time. Here is a list of things to do when it is picked up:
+* handle click to show more info about clicked element (inclusing sums on bars), use timer to avoid triggering click on drag
+* improve axis style
+* resize with container resize
+* host in a container that fits available size (with no explisit properties)
+* fix bug: when dragging a segment all transformations cahnge. when droping dragEnd resets translation to 0,0 and the group is offset by the bars translation (rep: drag chart then click bars)
+
+feuture features:
+* support RTL
+* cach data retrived?
+* pack in a html 5 component
+* support sunburst graph?

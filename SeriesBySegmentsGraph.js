@@ -1,3 +1,4 @@
+//#region "Definitions"
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -84,15 +85,12 @@ define(["require", "exports"], function (require, exports) {
         return TimelineData;
     })(RetrivedData);
     exports.TimelineData = TimelineData;
+    //#endregion 
     var Painter = (function () {
         function Painter() {
+            //#region "Constants"
             this.STARTUP_BAR_WIDTH = 25;
             this.MARGIN_BETWEEN_BAR_GROUPS = 0.1;
-            /**
-             * Zoom based on dragging the chard also invokes the click event.
-             * We make sure some time elapsed beween last zoom and click invocation.
-            */
-            this.ZOOM_CLICK_AVOID_DELAY = 500;
             this.CONTROL_MARGINS = { top: 20, right: 20, bottom: 20, left: 40 };
             this.BREADCRUMB_DRAG_TO_DELETE_DISTANCE = 80;
             this.BREADCRUMBS_MARGINS = { top: 0, right: 0, bottom: 20, left: 0 };
@@ -103,25 +101,24 @@ define(["require", "exports"], function (require, exports) {
             this.AVAILABLE_SEGMENTS_DIMENSIONS = {
                 width: 75, height: 30, spacing: 3, textSpacing: 2, rounding: 3
             };
-            this._self = this;
             this._clickX = -1;
-            this._lastZoomScale = 1;
-            this._lastZoomtanslateX = 0;
-            this._lastZoomtanslateY = 0;
-            this._lastZoomTime = Date.now();
             this._segementsXTransfomation = 0;
             this._dragTarget = null;
             this._drageTargetType = DrageObjectType.None;
             this._dragSource = null;
             this._drageSourceType = DrageObjectType.None;
         }
+        //#endregion "Private variables"
+        /**
+        * Call this once to initialize control.
+        */
         Painter.prototype.setup = function (seriesDescriptions, segmentDescriptions, data, dataCallback, 
             /**
              * Search string for the page element to contain the chart:
              * @example
              * "#elmentId",".elementCalss","body"
              */
-            chartContainer, startFilters, 
+            chartContainerSelector, startFilters, 
             /**
              * When using more than one chart in a single page this value is appende to elements unique id's
              */
@@ -131,10 +128,10 @@ define(["require", "exports"], function (require, exports) {
             this._seriesDescriptions = seriesDescriptions;
             this._segmentDescriptions = segmentDescriptions;
             this._chartUniqueSuffix = chartUniqueSuffix;
-            this._chartContainer = chartContainer;
+            this._chartContainerSelector = chartContainerSelector;
             this._dataCallback = dataCallback;
             this._currentFilteringSegments = startFilters == null ? [] : startFilters;
-            var container = d3.select(chartContainer);
+            var container = d3.select(chartContainerSelector);
             var svg = container.append("svg")
                 .attr("id", "controlSvg" + this._chartUniqueSuffix);
             svg.append("g")
@@ -173,7 +170,9 @@ define(["require", "exports"], function (require, exports) {
                 .attr("id", "xAxisClipPath" + this._chartUniqueSuffix)
                 .append("rect")
                 .attr("id", "xAxisClipRect" + this._chartUniqueSuffix);
-            var contentGA = chartGroup.append("g").attr("id", "contentGroup" + this._chartUniqueSuffix);
+            chartGroup.append("g")
+                .attr("id", "contentGroup" + this._chartUniqueSuffix)
+                .attr("clip-path", "url(#chartClipPath" + this._chartUniqueSuffix + ")");
             svg.append("g")
                 .attr("id", "availableSegments" + this._chartUniqueSuffix);
             this.drawData(data);
@@ -182,7 +181,8 @@ define(["require", "exports"], function (require, exports) {
             var _this = this;
             this._segementsXTransfomation = 0;
             this._currentXSegmentId = data.xAxisSegmentId;
-            var container = d3.select(this._chartContainer);
+            var self = this;
+            var container = d3.select(this._chartContainerSelector);
             var containerWidth = +container.attr("width"), containerHeight = +container.attr("height");
             var svg = container.select("#controlSvg" + this._chartUniqueSuffix)
                 .attr("width", containerWidth)
@@ -200,20 +200,17 @@ define(["require", "exports"], function (require, exports) {
             var chartTop = breadcrumbsTop
                 + this.BREADCRUMB_DIMENSIONS.height
                 + this.BREADCRUMBS_MARGINS.bottom;
-            var chartGroup = svg.select("#chartGroup" + this._chartUniqueSuffix)
+            svg.select("#chartGroup" + this._chartUniqueSuffix)
                 .attr("transform", "translate(" + this.CONTROL_MARGINS.left + "," + chartTop + ")");
+            //#region Axis
             var itemsPerSegment = d3.max(data.segments.map(function (seg) { return seg.dataItems.length; }));
             var startupSegmentWidth = itemsPerSegment * this.STARTUP_BAR_WIDTH * (1 + 2 * this.MARGIN_BETWEEN_BAR_GROUPS);
             var widthOfAllData = startupSegmentWidth * data.segments.length;
-            var overlay = d3.select("#overlay" + this._chartUniqueSuffix)
-                .attr("width", chartWidth)
-                .attr("height", chartHeight);
             this._xScale.rangeRoundBands([0, widthOfAllData], this.MARGIN_BETWEEN_BAR_GROUPS);
             this._yScale.range([chartHeight, 0]);
             var maxValue = d3.max(data.segments.map(function (seg) { return d3.max(seg.dataItems.map(function (itm) { return itm.value; })); }));
             this._xScale.domain(data.segments.map(function (d) { return _this.getSegmentValueId(d.segment); }));
             this._yScale.domain([0, maxValue]);
-            var self = this;
             this._xAxis.tickFormat(function (segKey) {
                 var length = data.segments.length;
                 for (var index = 0; index < length; index++) {
@@ -228,11 +225,6 @@ define(["require", "exports"], function (require, exports) {
                 .attr("transform", "translate(0," + chartHeight + ")")
                 .transition().duration(750).ease("sin-in-out")
                 .call(this._xAxis);
-            var availableSegmentsTop = chartTop
-                + chartHeight
-                + this.AVAILABLE_SEGMENTS_MARGINS.top;
-            var availableSegmentsGroup = d3.select("#availableSegments" + this._chartUniqueSuffix)
-                .attr("transform", "translate(" + (this.CONTROL_MARGINS.left + this.AVAILABLE_SEGMENTS_MARGINS.left) + "," + availableSegmentsTop + ")");
             var yaxis = d3.select("#yAxis" + this._chartUniqueSuffix)
                 .attr("class", "y axis");
             yaxis
@@ -245,25 +237,11 @@ define(["require", "exports"], function (require, exports) {
                 .style("text-anchor", "end")
                 .text(data.yAxisDisplayName);
             var yAxisGroup = d3.select("#yAxis" + this._chartUniqueSuffix);
-            d3.select("#contentClipRect" + this._chartUniqueSuffix)
-                .attr("width", chartWidth) //Set the width of the clipping area
-                .attr("x", +yAxisGroup.attr("width"))
-                .attr("height", chartHeight); // set the height of the clipping area
-            d3.select("#xAxisClipRect" + this._chartUniqueSuffix)
-                .attr("width", chartWidth) //Set the width of the clipping area
-                .attr("height", chartHeight + this.CONTROL_MARGINS.bottom); // set the height of the clipping area
-            var contentG = d3.select("#contentGroup" + this._chartUniqueSuffix);
-            contentG.attr("clip-path", "url(#chartClipPath" + this._chartUniqueSuffix + ")");
-            var segments = contentG.selectAll(".segment")
-                .data(data.segments, function (seg) { return _this.getSegmentValueId(seg.segment); });
-            segments.enter()
-                .append("g")
-                .attr("class", "segment");
-            var exitingSegments = segments.exit();
-            // exit segemtns not clicked:
-            exitingSegments.transition()
-                .style("opacity", 0).remove();
-            var self = this;
+            //#endregion Axis
+            //#region overlay
+            var overlay = d3.select("#overlay" + this._chartUniqueSuffix)
+                .attr("width", chartWidth)
+                .attr("height", chartHeight);
             var overlayDrag = d3.behavior.drag()
                 .on("dragstart", function () {
                 self.setDragStartPostion();
@@ -274,9 +252,55 @@ define(["require", "exports"], function (require, exports) {
                 .on("dragend", function () {
                 self.dragChartEnd(this);
             });
+            overlay.call(overlayDrag);
+            //#endregion overlay
+            //#region Clipping
+            d3.select("#contentClipRect" + this._chartUniqueSuffix)
+                .attr("width", chartWidth) //Set the width of the clipping area
+                .attr("x", +yAxisGroup.attr("width"))
+                .attr("height", chartHeight); // set the height of the clipping area
+            d3.select("#xAxisClipRect" + this._chartUniqueSuffix)
+                .attr("width", chartWidth) //Set the width of the clipping area
+                .attr("height", chartHeight + this.CONTROL_MARGINS.bottom); // set the height of the clipping area
+            //#endregion Clipping
+            var contentGroup = d3.select("#contentGroup" + this._chartUniqueSuffix);
+            contentGroup.attr("clip-path", "url(#chartClipPath" + this._chartUniqueSuffix + ")");
+            //#region Segments
+            var segments = contentGroup.selectAll(".segment")
+                .data(data.segments, function (seg) { return _this.getSegmentValueId(seg.segment); });
+            segments.enter()
+                .append("g")
+                .attr("class", "segment");
+            var exitingSegments = segments.exit();
+            exitingSegments.transition()
+                .style("opacity", 0).remove();
             var segmentDrag = d3.behavior.drag()
                 .on("dragstart", function () {
                 self.dragChartStart(this);
+                var dataMarker = d3.select("#dataMarker" + self._chartUniqueSuffix);
+                dataMarker.style("opacity", "1");
+                var markerHeight = 30;
+                var markerWidth = 20;
+                var text = dataMarker
+                    .select("text")
+                    .classed("dragMarker", true)
+                    .text(d3.select(this).datum().segment.displayName);
+                var dataItems = d3.select(this).datum().dataItems;
+                var bars = dataMarker
+                    .selectAll("rect")
+                    .data(dataItems);
+                bars.enter()
+                    .append("rect")
+                    .attr("class", function (itm) { return self.getSeries(itm.seriesId).cssClass + " dragMarker"; });
+                var maxData = Math.max.apply(Math, dataItems.map(function (itm) { return itm.value; }));
+                var scale = markerHeight / maxData;
+                bars
+                    .attr("x", function (itm, i) { return (markerWidth / itemsPerSegment) * i; })
+                    .attr("width", function (itm) { return (markerWidth / itemsPerSegment); })
+                    .attr("y", function (itm) { return markerHeight - itm.value * scale; })
+                    .attr("data-ziv-val", function (itm) { return itm.value; })
+                    .attr("height", function (itm) { return itm.value * scale; });
+                bars.exit().remove();
             })
                 .on("drag", function () {
                 var chartBaseCoordinates = d3.mouse(svg.node());
@@ -287,122 +311,31 @@ define(["require", "exports"], function (require, exports) {
                 self.dragChart(widthOfAllData, chartWidth, chartHeight);
             })
                 .on("dragend", function () {
+                var dataMarker = d3.select("#dataMarker" + self._chartUniqueSuffix);
+                dataMarker.style("opacity", "0");
                 self.dragChartEnd(this);
-                /*
-                if (self._dragTarget == null) {
-                    return;
-                }
-
-                var targetSelection = d3.select(self._dragTarget);
-                if (self._drageTargetType == DrageObjectType.AvailableSegment) {
-                    if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
-                        return;
-                    }
-                    self._currentFilteringSegments.push(d3.select(this).datum().segment);
-
-                    var requestParams: SegmentRequestParams = {
-                        requestedSegmentId: self._dragTarget.id,
-                        filterSegments: self._currentFilteringSegments,
-                        date: null
-                    };
-                    var newData = self._dataCallback(requestParams)
-                    self._clickX = d3.event.x;
-                    self.drawData(newData);
-                }
-                */
             });
-            /*
-        var zoom = d3.behavior.zoom().scaleExtent([chartWidth / widthOfAllData, chartWidth / (startupSegmentWidth * 2)]).on("zoom", () => {
-            var scale = (<any>d3.event).scale;
-            var translateX: number = (<any>d3.event).translate[0];
-            var translateY: number = (<any>d3.event).translate[1];
-            // Prevent data from moving away from y axis:
-            translateX = translateX > 0 ? 0 : translateX;
-            var maxTranslateX = widthOfAllData * scale - chartWidth;
-            translateX = translateX < (-maxTranslateX) ? (-maxTranslateX) : translateX;
-            var segmentsA = contentG.selectAll(".segment")
-            segmentsA.attr("transform", "matrix(" + scale + ",0,0,1," + translateX + ",0)")
-            svg.select(".x.axis")
-                .attr("transform", "translate(" + translateX + "," + (chartHeight) + ")")
-                .call(self._xAxis.scale(self._xScale.rangeRoundBands([0, widthOfAllData * scale], .1 * scale)));
-    
-            var isRealZoomEvent: boolean =
-                self._lastZoomScale != scale
-                || self._lastZoomtanslateX != translateX
-                || self._lastZoomtanslateY != translateY;
-            if (isRealZoomEvent) {
-                self._lastZoomTime = Date.now();
-                self._lastZoomScale = scale;
-                self._lastZoomtanslateX = translateX;
-                self._lastZoomtanslateY = translateY;
-            }
-            //this._tooltip.hide();
-        });
-    
-        this._tooltip = d3.tip<fullDataItem>()
-            .attr('class', 'd3-tip')
-            .offset([-10, 0])
-            .html(
-            d=> "<strong>" + d.dataItem.seriesId + ":</strong> <span style='color:red'>" + d.dataItem.value + "</span>"
-            );
-    */
+            //#region Bars
             var bars = segments.selectAll("rect")
                 .data(function (sdi) { return sdi.dataItems.map(function (dataItem) { return { dataItem: dataItem, segment: sdi }; }); }, function (itm) { return _this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId; });
-            /*
-                    bars.on("click", () => {
-                        var v = [];
-                        for (var index = 0; index < v.length; index++) {
-                            var element = v[index];
-                            
-                        }
-                    })
-            */
             var barEnterStartX = this._clickX < 0 ? chartWidth / 2 : this._clickX - (startupSegmentWidth / 2), barEnterStartY = chartHeight;
             bars.enter()
                 .append("rect")
                 .attr("class", function (itm) { return _this.getSeries(itm.dataItem.seriesId).cssClass; });
             bars
-                .attr("x", barEnterStartX)
-                .attr("y", barEnterStartY)
-                .transition().duration(1500)
+                .attr("y", function (itm) { return barEnterStartY; })
+                .transition().duration(300).ease("quad")
                 .attr("x", function (itm, i) { return _this._xScale(_this.getSegmentValueId(itm.segment.segment)) + i * _this._xScale.rangeBand() / itemsPerSegment; })
                 .attr("width", function (itm) { return _this._xScale.rangeBand() / itemsPerSegment; })
                 .attr("y", function (itm) { return _this._yScale(itm.dataItem.value); })
                 .attr("data-ziv-val", function (itm) { return itm.dataItem.value; })
                 .attr("height", function (itm) { return chartHeight - _this._yScale(itm.dataItem.value); });
             bars.exit().remove();
-            bars.on("mouseover", function () {
-                var v = 3;
-            });
+            //#endregion Bars
+            // Must be located after bas have been created:
             segments.call(this.dragTarget, DrageObjectType.ChartSegment, this);
-            /*
-                    //segments.on("click.drag", () => d3.event.stopPropagation());
-                    var self = this;
-                    segments.on("click",
-                        (function(seg) {
-                            // Animate clicked segemtn to reload animation:
-                            
-                            d3.select(<Node>this)
-                                .transition()
-                                .attr("transform", "rotate(30)")
-                            
-                            if (Date.now() - self._lastZoomTime < self.ZOOM_CLICK_AVOID_DELAY) {
-                                return;
-                            }
-                            self._currentFilteringSegments.push(seg.segment);
-            
-                            var requestParams: SegmentRequestParams = {
-                                requestedSegmentId: "item",
-                                filterSegments: self._currentFilteringSegments,
-                                date: null
-                            };
-                            var newData = self._dataCallback(requestParams)
-                            self._clickX = d3.event.x;
-                            self.drawData(newData);
-            
-                        })
-                        );
-            */
+            //#endregion Segments
+            //#region Breadcrumns
             var breadcrubmesGroup = d3.select("#breadcrumbsGroup" + this._chartUniqueSuffix)
                 .attr("transform", "translate(" + (this.BREADCRUMBS_MARGINS.left + this.CONTROL_MARGINS.left) + "," + breadcrumbsTop + ")");
             var breadcrumbWrapperGroups = breadcrubmesGroup.selectAll("g.breadcrumb")
@@ -430,7 +363,6 @@ define(["require", "exports"], function (require, exports) {
                 }
                 return points.join(" ");
             });
-            //.style("fill", function (d) { return colors[d.name]; });
             crumbEnter.append("text");
             breadcrumbWrapperGroups
                 .select("text")
@@ -440,6 +372,13 @@ define(["require", "exports"], function (require, exports) {
                 .attr("dy", "0.35em")
                 .attr("class", function (d) { return ("breadcrumb text " + _this.getSegmentDescription(d.segmentId).cssClass); })
                 .text(function (d) { return d.displayName; });
+            //#endregion Breadcrumns
+            //#region Available segments
+            var availableSegmentsTop = chartTop
+                + chartHeight
+                + this.AVAILABLE_SEGMENTS_MARGINS.top;
+            var availableSegmentsGroup = d3.select("#availableSegments" + this._chartUniqueSuffix)
+                .attr("transform", "translate(" + (this.CONTROL_MARGINS.left + this.AVAILABLE_SEGMENTS_MARGINS.left) + "," + availableSegmentsTop + ")");
             var availableSegments = this.getAvailableSegments(data.xAxisSegmentId);
             var availableSegmentsG = availableSegmentsGroup
                 .selectAll(".availableSegment")
@@ -450,26 +389,67 @@ define(["require", "exports"], function (require, exports) {
                 .attr("class", function (d) { return ("availableSegment " + d.cssClass); })
                 .call(this.dragTarget, DrageObjectType.AvailableSegment, self);
             availableSegEnter.append("rect");
+            var availableSegmentXOffset = 0;
             availableSegmentsG.select("rect")
                 .transition()
-                .attr("x", function (d, i) { return i * (_this.AVAILABLE_SEGMENTS_DIMENSIONS.width + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing); })
+                .attr("x", function (d, i) {
+                if (i == 0) {
+                    availableSegmentXOffset = 0;
+                    return availableSegmentXOffset;
+                }
+                availableSegmentXOffset += _this.AVAILABLE_SEGMENTS_DIMENSIONS.width;
+                var isSingleDecendantOfPreviuesSegment;
+                var parentSegment = availableSegments[availableSegments.indexOf(d) - 1];
+                isSingleDecendantOfPreviuesSegment =
+                    d.parentSegmentsIds != null
+                        && d.parentSegmentsIds.length == 1
+                        && d.parentSegmentsIds[0] == parentSegment.id;
+                if (isSingleDecendantOfPreviuesSegment) {
+                    availableSegmentXOffset -= _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing;
+                }
+                else {
+                    availableSegmentXOffset += _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing;
+                }
+                return availableSegmentXOffset;
+                //return i * (this.AVAILABLE_SEGMENTS_DIMENSIONS.width + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing)
+            })
                 .attr("rx", this.AVAILABLE_SEGMENTS_DIMENSIONS.rounding)
                 .attr("ry", this.AVAILABLE_SEGMENTS_DIMENSIONS.rounding)
                 .attr("width", this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
                 .attr("height", this.AVAILABLE_SEGMENTS_DIMENSIONS.height);
             availableSegEnter.append("text");
+            var availableSegmentXOffset = 0;
             availableSegmentsG.select("text")
                 .transition()
-                .attr("x", function (d, i) { return i * (_this.AVAILABLE_SEGMENTS_DIMENSIONS.width + _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing) + _this.AVAILABLE_SEGMENTS_DIMENSIONS.textSpacing; })
+                .attr("x", function (d, i) {
+                if (i == 0) {
+                    availableSegmentXOffset = 0;
+                    return availableSegmentXOffset;
+                }
+                availableSegmentXOffset += _this.AVAILABLE_SEGMENTS_DIMENSIONS.width;
+                var isSingleDecendantOfPreviuesSegment;
+                var parentSegment = availableSegments[availableSegments.indexOf(d) - 1];
+                isSingleDecendantOfPreviuesSegment =
+                    d.parentSegmentsIds != null
+                        && d.parentSegmentsIds.length == 1
+                        && d.parentSegmentsIds[0] == parentSegment.id;
+                if (isSingleDecendantOfPreviuesSegment) {
+                    availableSegmentXOffset -= _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing;
+                }
+                else {
+                    availableSegmentXOffset += _this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing;
+                }
+                return availableSegmentXOffset + _this.AVAILABLE_SEGMENTS_DIMENSIONS.textSpacing;
+                //return i * (this.AVAILABLE_SEGMENTS_DIMENSIONS.width + this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing) + this.AVAILABLE_SEGMENTS_DIMENSIONS.textSpacing
+            })
                 .attr("y", this.AVAILABLE_SEGMENTS_DIMENSIONS.height / 2)
                 .attr("dy", 4)
                 .attr("class", function (d) { return ("availableSegment text " + d.cssClass); })
                 .text(function (d) { return d.displayName; });
-            //	svg.call(zoom).on("click.zoom", null);
             segments.call(segmentDrag);
-            overlay.call(overlayDrag);
             availableSegmentsG.call(this.dragSource, DrageObjectType.AvailableSegment, this);
-            //bars.call(barDrag);
+            //#endregion Available segments
+            //#region Curren segment
             // we use a cobntainer so that the actual element alwais strats with 0 trnasform - easier to manage drag
             d3.select("#currentSegmentContainer" + this._chartUniqueSuffix).remove();
             var currentSegmentGroup = svg.append("g")
@@ -498,23 +478,31 @@ define(["require", "exports"], function (require, exports) {
                 .attr("dy", 4)
                 .attr("class", function (d) { return ("currentSegment text " + d.cssClass); })
                 .text(function (d) { return d.displayName; });
+            //#endregion Curren segment
+            //#region Data marker
             // create data marker last so that it is on top of the others:
             d3.select("#dataMarker" + this._chartUniqueSuffix).remove();
             var dataMarker = svg.append("g")
-                .attr("id", "dataMarker" + this._chartUniqueSuffix)
-                .append("circle")
-                .attr("r", 30)
-                .style("fill", "red")
-                .style("pointer-events", "none");
+                .style("pointer-events", "none")
+                .attr("id", "dataMarker" + this._chartUniqueSuffix);
+            dataMarker.append("text")
+                .style("text-anchor", "end");
+            //#endregion Data marker
         };
         Painter.prototype.getAvailableSegments = function (xAxisSegmentId) {
             var segments = this._segmentDescriptions.slice(0);
+            // Remove current filters:
             this._currentFilteringSegments.forEach(function (fltr) {
                 var filterSegment = segments.filter(function (seg) { return seg.id == fltr.segmentId; });
                 if (filterSegment.length > 0) {
                     segments.splice(segments.indexOf(filterSegment[0]), 1);
                 }
+                /* consider:Remove parents of current filters
+                    one habd: no need to filter or slice to chapter when alredy filtered by subchapter
+                    other hand: can be used as a quick way to access description of segments higher in the hirarchy
+                */
             });
+            // Remove current x axis segment:
             var filterSegment = segments.filter(function (seg) { return seg.id == xAxisSegmentId; });
             segments.splice(segments.indexOf(filterSegment[0]), 1);
             return segments;
@@ -554,7 +542,10 @@ define(["require", "exports"], function (require, exports) {
             xTransform = xTransform < 0 ? xTransform : 0;
             var scale = 1;
             var maxTranslateX = widthOfAllData * scale - width;
-            xTransform = xTransform < (-maxTranslateX) ? (-maxTranslateX) : xTransform;
+            if (maxTranslateX > 0) {
+                xTransform = xTransform < (-maxTranslateX) ? (-maxTranslateX) : xTransform;
+            }
+            ;
             segmentsA.attr("transform", "matrix(1,0,0,1," + xTransform + ",0)");
             svg.select(".x.axis")
                 .attr("transform", "translate(" + xTransform + "," + height + ")")
@@ -570,10 +561,28 @@ define(["require", "exports"], function (require, exports) {
             source.on("mouseover", function (d) {
                 self._dragTarget = d;
                 self._drageTargetType = targetType;
+                var dragTargetSelection = d3.select(this);
+                if (self._drageSourceType != DrageObjectType.None) {
+                    var selections = self.getDragTargets(self._drageSourceType);
+                    var isRelevantTarget = false;
+                    selections.forEach(function (selection) {
+                        var v = selection.filter(function (d) { return d == dragTargetSelection.datum(); });
+                        if (v.size() > 0) {
+                            isRelevantTarget = true;
+                            return;
+                        }
+                    });
+                    if (isRelevantTarget) {
+                        dragTargetSelection.classed("dragSourceOver", true);
+                    }
+                }
             })
                 .on("mouseout", function (d) {
                 self._dragTarget = null;
                 self._drageTargetType = null;
+                if (self._drageSourceType != DrageObjectType.None) {
+                    d3.select(this).classed("dragSourceOver", false);
+                }
             });
             return source;
         };
@@ -673,6 +682,9 @@ define(["require", "exports"], function (require, exports) {
             self._dragSource = null;
         };
         Painter.prototype.returnDragSourceToOriginalPosition = function (dragSource) {
+            if (this._drageSourceType == DrageObjectType.ChartSegment) {
+                return;
+            }
             d3.select(dragSource)
                 .transition()
                 .attr("transform", "translate(0,0)");

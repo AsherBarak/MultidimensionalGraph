@@ -5,7 +5,7 @@ export class TrialsBudgetDataGenerator {
 	private static _segments: SeriesBySegment.SegmentValueForDisplay[] = [];
 	private static _data: DataElement[] = [];
 	private static NUMBER_OF_VALUES_PER_SEGMENT: number = 10;
-	private static NUMBER_OF_DATA_ELEMENTS: number = 100;
+	private static NUMBER_OF_DATA_ELEMENTS: number = 1000;
 
 	static getSegmentsDescriptions(): SeriesBySegment.SegmentDescription[] {
 		var segmentDescriptions: SeriesBySegment.SegmentDescription[] = [

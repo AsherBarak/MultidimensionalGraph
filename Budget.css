@@ -1,112 +1,152 @@
-	body {
-  font: 10px sans-serif;
+body {
+    font: 10px sans-serif;
 }
-  
-  .budget
-	{
-		fill: darkgreen;
-	}
-	
-	.spent
-	{
-		fill: cornflowerblue;
-	}
-	
-	.overlay {
-  /*fill: none;*/
-  opacity: 0.5;
-  pointer-events: all;
+
+.budget {
+    fill: #00a957;
+}
+
+.spent {
+    fill: #9cd088;
+}
+
+.planned{
+    fill:#f0f2b8
+}
+
+.overlay {
+    /*fill: none;*/
+    opacity: 0;
+    pointer-events: all;
+}
+
+.dragMarker {
+    stroke: lightyellow;
+    stroke-width: 0.5px;
+}
+
+text.dragMarker {
+    stroke: lightyellow;
 }
 
 .d3-tip {
-  line-height: 1;
-  font-weight: bold;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.8);
-  color: #fff;
-  border-radius: 2px;
+    line-height: 1;
+    font-weight: bold;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border-radius: 2px;
 }
 
-/* Creates a small triangle extender for the tooltip */
-.d3-tip:after {
-  box-sizing: border-box;
-  display: inline;
-  font-size: 10px;
-  width: 100%;
-  line-height: 1;
-  color: rgba(0, 0, 0, 0.8);
-  content: "\25BC";
-  position: absolute;
-  text-align: center;
+    /* Creates a small triangle extender for the tooltip */
+    .d3-tip:after {
+        box-sizing: border-box;
+        display: inline;
+        font-size: 10px;
+        width: 100%;
+        line-height: 1;
+        color: rgba(0, 0, 0, 0.8);
+        content: "\25BC";
+        position: absolute;
+        text-align: center;
+    }
+
+    /* Style northward tooltips differently */
+    .d3-tip.n:after {
+        margin: -1px 0 0 0;
+        top: 100%;
+        left: 0;
+    }
+
+.segment {
+    background-color: red;
+    pointer-events: all;
+    fill: amediumaquamarine;
+    cursor: default;
 }
 
-/* Style northward tooltips differently */
-.d3-tip.n:after {
-  margin: -1px 0 0 0;
-  top: 100%;
-  left: 0;
+.availableSegment {
+    fill: red;
+    cursor: default;
 }
 
-.segment
-{
-  background-color: red;
-  pointer-events: all;
-  fill: amediumaquamarine;
+.currentSegment {
+    fill: red;
+    cursor: default;
 }
 
-.availableSegment{
-  fill: red;
-}
-
-.currentSegment{
-  fill: red;
-
-}
-
-.breadcrumb{
+.breadcrumb {
     fill: tan;
-  outline-color: green;
-  outline-width: 5px;
-  
+    outline-color: green;
+    outline-width: 5px;
+    cursor: default;
 }
 
-.breadcrumb.text{
-  fill: white;
-   stroke-width: 0;
-   font-weight:bold;
-}
-
-.subproject{
-  fill: blue;
-  padding: 10px;
-  margin: 10px;
-}
-
-.project{
-  fill: aquamarine;
-  padding: 10px;
-  margin: 10px;
+.breadcrumb.text {
+    fill: white;
+    stroke-width: 0;
+    font-weight: bold;
 }
 
 
-.availableSegment.text.subproject{
-  fill: chartreuse;
+
+.project {
+    fill: #2B5478;
 }
 
-.availableSegment.text{
-  fill: white;
-   stroke-width: 0;
-   font-weight:bold;
+.subproject {
+    fill: #C3AF4E;
 }
 
-
-.currentSegment.text{
-  fill: white;
-   stroke-width: 0;
-   font-weight:bold;
+.location {
+    fill: #4B2252;
 }
 
-.dragTraget{
-  stroke: black;
-  stroke-width: 3px;
+.chapter {
+    fill: #AC1616;
+}
+
+.subchapter {
+    fill: #C53131;
+}
+
+.boqItem {
+    fill: #52524F;
+}
+
+.item {
+    fill: #c649c3;
+}
+
+.account {
+    fill: blue;
+}
+
+.budgetGroup {
+    fill: #307330;
+}
+
+.budgetItem {
+    fill: #637332;
+}
+
+.availableSegment.text {
+    fill: white;
+    stroke-width: 0;
+    font-weight: bold;
+}
+
+.currentSegment.text {
+    fill: white;
+    stroke-width: 0;
+    font-weight: bold;
+}
+
+.dragTraget {
+    stroke: tan;
+    stroke-width: 2px;
+}
+
+.dragSourceOver{
+    stroke: #573508;
 }

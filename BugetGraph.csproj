@@ -37,6 +37,7 @@
     <Content Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="todo.txt" />
     <Content Include="tsconfig.json" />
   </ItemGroup>
   <PropertyGroup>
