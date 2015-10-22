@@ -26,7 +26,6 @@
     <Content Include="index.html" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="D3Painter.ts" />
     <TypeScriptCompile Include="Main.ts" />
     <TypeScriptCompile Include="SeriesBySegmentsGraph.ts" />
     <TypeScriptCompile Include="TrilasData.ts" />
