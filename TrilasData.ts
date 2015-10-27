@@ -20,7 +20,7 @@ export class TrialsBudgetDataGenerator {
 				cssClass: "subproject",
 				displayName: "Subproject",
 				description: "Subproject",
-				parentSegmentsIds: ["project"],
+                parentSegmentsIds: ["project"],
 			},
 			{
 				id: "location",
