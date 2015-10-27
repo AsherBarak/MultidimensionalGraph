@@ -1,4 +1,3 @@
-import {Painter} from "./D3Painter";
 import {BudgetData} from "DataAccess/DataProvider"
 import {MockDataAccess} from "DataAccess/DataProvider"
 import { BudgetDataRequestParams} from "DataAccess/DataProvider"

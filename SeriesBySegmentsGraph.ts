@@ -268,13 +268,13 @@ export class Painter {
             d3.max(
                 data.segments.map(seg=>
                 { return d3.max(seg.dataItems.map(itm=> itm.value)); }
-                ));
+                    ));
 
         this._xScale.domain(data.segments.map(d=> this.getSegmentValueId(d.segment)));
         this._yScale.domain([0, maxValue]);
 
 
-        this._xAxis.tickFormat(function (segKey): string {
+        this._xAxis.tickFormat(function(segKey): string {
             var length = data.segments.length;
             for (var index = 0; index < length; index++) {
                 var element = data.segments[index];
@@ -284,7 +284,7 @@ export class Painter {
             }
             return "err";
         }
-        );
+            );
 
         var xAxis = d3.select("#xAxis" + this._chartUniqueSuffix)
             .attr("transform", "translate(0," + chartHeight + ")")
@@ -316,13 +316,13 @@ export class Painter {
             .attr("height", chartHeight);
 
         var overlayDrag = d3.behavior.drag()
-            .on("dragstart", function () {
+            .on("dragstart", function() {
                 self.setDragStartPostion();
             })
-            .on("drag", function () {
+            .on("drag", function() {
                 self.dragChart(widthOfAllData, chartWidth, chartHeight);
             })
-            .on("dragend", function () {
+            .on("dragend", function() {
                 self.dragChartEnd(this);
             });
 
@@ -360,7 +360,7 @@ export class Painter {
             .style("opacity", 0).remove();
 
         var segmentDrag = d3.behavior.drag()
-            .on("dragstart", function () {
+            .on("dragstart", function() {
                 self.dragChartStart(this);
 
                 var dataMarker = d3.select("#dataMarker" + self._chartUniqueSuffix);
@@ -397,7 +397,7 @@ export class Painter {
                 bars.exit().remove();
 
             })
-            .on("drag", function () {
+            .on("drag", function() {
                 var chartBaseCoordinates = d3.mouse(svg.node())
                 var x = chartBaseCoordinates[0];
                 var y = chartBaseCoordinates[1];
@@ -405,7 +405,7 @@ export class Painter {
                     .attr("transform", "translate(" + (x - 0) + "," + (y - 0) + ")");
                 self.dragChart(widthOfAllData, chartWidth, chartHeight);
             })
-            .on("dragend", function () {
+            .on("dragend", function() {
                 var dataMarker = d3.select("#dataMarker" + self._chartUniqueSuffix);
                 dataMarker.style("opacity", "0");
                 self.dragChartEnd(this);
@@ -415,8 +415,8 @@ export class Painter {
 
         var bars = segments.selectAll("rect")
             .data(
-            sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
-            itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
+                sdi=> sdi.dataItems.map(dataItem=> { return { dataItem: dataItem, segment: sdi } }),
+                itm=> this.getSegmentValueId(itm.segment.segment) + "_" + itm.dataItem.seriesId);
 
         var barEnterStartX = this._clickX < 0 ? chartWidth / 2 : this._clickX - (startupSegmentWidth / 2),
             barEnterStartY = chartHeight;
@@ -598,9 +598,9 @@ export class Painter {
             .attr("id", "currentSegmentContainer" + this._chartUniqueSuffix)
             .attr("transform", "translate("
             //+ (this.CONTROL_MARGINS.left + chartWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
-            + (containerWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
-            + ","
-            + (availableSegmentsTop - this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing - this.AVAILABLE_SEGMENTS_DIMENSIONS.height) + ")")
+                + (containerWidth - this.AVAILABLE_SEGMENTS_DIMENSIONS.width)
+                + ","
+                + (availableSegmentsTop - this.AVAILABLE_SEGMENTS_DIMENSIONS.spacing - this.AVAILABLE_SEGMENTS_DIMENSIONS.height) + ")")
             .append("g")
             .data(this._segmentDescriptions.filter(seg=> seg.id == data.xAxisSegmentId))
             .attr("id", "currentSegment" + this._chartUniqueSuffix)
@@ -652,7 +652,7 @@ export class Painter {
                 other hand: can be used as a quick way to access description of segments higher in the hirarchy
             */
         }
-        );
+            );
         // Remove current x axis segment:
         var filterSegment = segments.filter(seg=> seg.id == xAxisSegmentId);
         segments.splice(segments.indexOf(filterSegment[0]), 1);
@@ -716,7 +716,7 @@ export class Painter {
     }
 
     private dragTarget<Datum>(source: d3.Selection<Datum>, targetType: DrageObjectType, self: Painter): d3.Selection<Datum> {
-        source.on("mouseover", function (d) {
+        source.on("mouseover", function(d) {
             self._dragTarget = d;
             self._drageTargetType = targetType;
 
@@ -738,7 +738,7 @@ export class Painter {
             }
 
         })
-            .on("mouseout", function (d) {
+            .on("mouseout", function(d) {
                 self._dragTarget = null;
                 self._drageTargetType = null;
 
@@ -749,15 +749,22 @@ export class Painter {
         return source;
     }
 
+    private getDragTragetOver<Datum>(self: Painter) {
+        var selections = self.getDragTargets(self._drageSourceType);
+        selections.forEach(selection=> {
+            var pos = d3.mouse(selection.node());
+        });
+    }
+
     private dragSource<Datum>(source: d3.Selection<Datum>, drageSourceType: DrageObjectType, self: Painter): d3.Selection<Datum> {
         var drag = d3.behavior.drag()
-            .on("dragstart", function () {
+            .on("dragstart", function() {
                 self.dragStart(self, this, drageSourceType);
             })
-            .on("drag", function () {
+            .on("drag", function() {
                 self.drag(self, this, drageSourceType);
             })
-            .on("dragend", function () {
+            .on("dragend", function() {
                 self.dragEnd(self, this, drageSourceType);
             });
 
@@ -787,6 +794,13 @@ export class Painter {
     private dragEnd(self: Painter, drageSource: any, dragSourceType: DrageObjectType) {
         d3.select(drageSource).style("pointer-events", "all");
         self.unmarkDragTragets(dragSourceType);
+
+
+
+this.getDragTragetOver(self);
+
+
+
 
         if (dragSourceType == DrageObjectType.Breadcrumb) {
             var svg = d3.select("#controlSvg" + this._chartUniqueSuffix);

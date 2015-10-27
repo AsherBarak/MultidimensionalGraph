@@ -585,6 +585,12 @@ define(["require", "exports"], function (require, exports) {
             });
             return source;
         };
+        Painter.prototype.getDragTragetOver = function (self) {
+            var selections = self.getDragTargets(self._drageSourceType);
+            selections.forEach(function (selection) {
+                var pos = d3.mouse(selection.node());
+            });
+        };
         Painter.prototype.dragSource = function (source, drageSourceType, self) {
             var drag = d3.behavior.drag()
                 .on("dragstart", function () {
@@ -619,6 +625,7 @@ define(["require", "exports"], function (require, exports) {
         Painter.prototype.dragEnd = function (self, drageSource, dragSourceType) {
             d3.select(drageSource).style("pointer-events", "all");
             self.unmarkDragTragets(dragSourceType);
+            this.getDragTragetOver(self);
             if (dragSourceType == DrageObjectType.Breadcrumb) {
                 var svg = d3.select("#controlSvg" + this._chartUniqueSuffix);
                 var chartBaseCoordinates = d3.mouse(svg.node());
