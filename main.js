@@ -222,10 +222,16 @@ define(["require", "exports", "SeriesBySegmentsGraph", "./TrilasData"], function
                 ]
             };
             var painter = new SeriesBySegment.Painter();
+            //var dataGenerator = new Data.TrialsBudgetDataGenerator();
+            var dataGenerator = new Data.TrialsGameOfTHronesDataGenerator();
             var isUsingDynamicData = true;
             if (isUsingDynamicData) {
-                var intialData = Data.TrialsBudgetDataGenerator.getSegmentData({ filterSegments: [], date: null, requestedSegmentId: 'project' });
-                painter.setup(Data.TrialsBudgetDataGenerator.getSeriesDescriptions(), Data.TrialsBudgetDataGenerator.getSegmentsDescriptions(), intialData, Data.TrialsBudgetDataGenerator.getSegmentData, "#budgetPlot");
+                var intialData = dataGenerator.getSegmentData({ filterSegments: [], date: null, requestedSegmentId: 'House' });
+                painter.setup(dataGenerator.getSeriesDescriptions(), dataGenerator.getSegmentsDescriptions(), intialData, 
+                // Create a closure so that 'this' is not equal the painter class when invoked:
+                function (params) {
+                    return dataGenerator.getSegmentData(params);
+                }, "#budgetPlot");
             }
             else {
                 painter.setup(seriesDescriptions, segmentDescriptions, data, null, "#budgetPlot");

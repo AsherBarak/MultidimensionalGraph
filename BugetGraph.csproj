@@ -22,11 +22,12 @@
     <Service Include="{4A0DDDB5-7A95-4FBF-97CC-616D07737A77}" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Got.css" />
     <Content Include="Budget.css" />
     <Content Include="index.html" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="Main.ts" />
+    <TypeScriptCompile Include="main.ts" />
     <TypeScriptCompile Include="SeriesBySegmentsGraph.ts" />
     <TypeScriptCompile Include="TrilasData.ts" />
     <TypeScriptCompile Include="TypescriptDefinitions\D3.d.ts" />

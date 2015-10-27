@@ -345,6 +345,8 @@ export class Painter {
 
         //#region Segments
 
+        var contentGroup = d3.select("#contentGroup" + this._chartUniqueSuffix);
+
         var segments = contentGroup.selectAll(".segment")
             .data(data.segments, seg=> this.getSegmentValueId(seg.segment));
 

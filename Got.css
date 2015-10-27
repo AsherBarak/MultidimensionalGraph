@@ -1,0 +1,153 @@
+body {
+    font: 10px sans-serif;
+}
+
+.Killed {
+    fill: #b93b4a;
+}
+
+.Introduced {
+    fill: #9cd088;
+}
+
+.overlay {
+    /*fill: none;*/
+    opacity: 0;
+    pointer-events: all;
+}
+
+.dragMarker {
+    stroke: lightyellow;
+    stroke-width: 0.5px;
+}
+
+text.dragMarker {
+    stroke: lightyellow;
+}
+
+.d3-tip {
+    line-height: 1;
+    font-weight: bold;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border-radius: 2px;
+}
+
+    /* Creates a small triangle extender for the tooltip */
+    .d3-tip:after {
+        box-sizing: border-box;
+        display: inline;
+        font-size: 10px;
+        width: 100%;
+        line-height: 1;
+        color: rgba(0, 0, 0, 0.8);
+        content: "\25BC";
+        position: absolute;
+        text-align: center;
+    }
+
+    /* Style northward tooltips differently */
+    .d3-tip.n:after {
+        margin: -1px 0 0 0;
+        top: 100%;
+        left: 0;
+    }
+
+.segment {
+    background-color: red;
+    pointer-events: all;
+    fill: amediumaquamarine;
+    cursor: default;
+}
+
+.availableSegment {
+    fill: red;
+    cursor: default;
+}
+
+.currentSegment {
+    fill: red;
+    cursor: default;
+}
+
+.breadcrumb {
+    fill: tan;
+    outline-color: green;
+    outline-width: 5px;
+    cursor: default;
+}
+
+    .breadcrumb.text {
+        fill: white;
+        stroke-width: 0;
+        font-weight: bold;
+    }
+
+
+
+.House {
+    fill: #2B5478;
+}
+
+.Gender {
+    fill: #C3AF4E;
+}
+
+.Continent {
+    fill: #C53131;
+}
+
+.Region {
+    fill: #ad2323;
+}
+
+.Location {
+    fill: #901111;
+}
+
+
+
+.Book {
+    fill: #c649c3;
+}
+
+
+.Cahpter {
+    fill: #307330;
+}
+
+.Season {
+    fill: #637332;
+}
+
+.availableSegment.text {
+    fill: white;
+    stroke-width: 0;
+    font-weight: bold;
+}
+
+.currentSegment.text {
+    fill: white;
+    stroke-width: 0;
+    font-weight: bold;
+}
+
+.dragTraget {
+    stroke: tan;
+    stroke-width: 2px;
+}
+
+.dragSourceOver {
+    stroke: #573508;
+}
+
+#budgetPlot {
+    background-image: url("http://media.moddb.com/images/groups/1/10/9704/auto/game-of-thrones-a-song-of-ice-and-fire-sean-bean-tv-series-1920x1080-hd-wallpaper.jpg");
+    /*background-image:url("http://media.moddb.com/images/groups/1/10/9704/auto/gameofthrones-tyrion.jpg");*/
+    width: 800px;
+    height: 450px;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: 50% 50%;
+}

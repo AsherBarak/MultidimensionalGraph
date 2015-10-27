@@ -1,4 +1,4 @@
-//#region "Definitions"
+//#region Definitions
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -263,9 +263,8 @@ define(["require", "exports"], function (require, exports) {
                 .attr("width", chartWidth) //Set the width of the clipping area
                 .attr("height", chartHeight + this.CONTROL_MARGINS.bottom); // set the height of the clipping area
             //#endregion Clipping
-            var contentGroup = d3.select("#contentGroup" + this._chartUniqueSuffix);
-            contentGroup.attr("clip-path", "url(#chartClipPath" + this._chartUniqueSuffix + ")");
             //#region Segments
+            var contentGroup = d3.select("#contentGroup" + this._chartUniqueSuffix);
             var segments = contentGroup.selectAll(".segment")
                 .data(data.segments, function (seg) { return _this.getSegmentValueId(seg.segment); });
             segments.enter()
@@ -689,27 +688,6 @@ define(["require", "exports"], function (require, exports) {
                 .transition()
                 .attr("transform", "translate(0,0)");
         };
-        Painter.prototype.drillDownToSegment = function (drilledSegment, newXAxisSegment) {
-            this._currentFilteringSegments.push(drilledSegment.segment);
-            var requestParams = {
-                requestedSegmentId: newXAxisSegment.id,
-                filterSegments: this._currentFilteringSegments,
-                date: null
-            };
-            var newData = this._dataCallback(requestParams);
-            //self._clickX = d3.event.x;
-            this.drawData(newData);
-        };
-        Painter.prototype.changeCurrentSegmentWithAvailablSegment = function (xSegment, availableSegment) {
-            var requestParams = {
-                requestedSegmentId: availableSegment.id,
-                filterSegments: this._currentFilteringSegments,
-                date: null
-            };
-            var newData = this._dataCallback(requestParams);
-            //self._clickX = d3.event.x;
-            this.drawData(newData);
-        };
         Painter.prototype.markDragTragets = function (dragSourceType) {
             var dragTragetSelectors = this.getDragTargets(dragSourceType);
             dragTragetSelectors.forEach(function (slct) { return slct.classed("dragTraget", true); });
@@ -740,6 +718,27 @@ define(["require", "exports"], function (require, exports) {
                     return [];
                     break;
             }
+        };
+        Painter.prototype.drillDownToSegment = function (drilledSegment, newXAxisSegment) {
+            this._currentFilteringSegments.push(drilledSegment.segment);
+            var requestParams = {
+                requestedSegmentId: newXAxisSegment.id,
+                filterSegments: this._currentFilteringSegments,
+                date: null
+            };
+            var newData = this._dataCallback(requestParams);
+            //self._clickX = d3.event.x;
+            this.drawData(newData);
+        };
+        Painter.prototype.changeCurrentSegmentWithAvailablSegment = function (xSegment, availableSegment) {
+            var requestParams = {
+                requestedSegmentId: availableSegment.id,
+                filterSegments: this._currentFilteringSegments,
+                date: null
+            };
+            var newData = this._dataCallback(requestParams);
+            //self._clickX = d3.event.x;
+            this.drawData(newData);
         };
         Painter.prototype.breadcrumbPoints = function (d, i) {
             var points = [];
