@@ -1,2 +1,2 @@
-# D3_Budget
-Budget visualization using D3.js and TypeScript. Trials project.
+# Multi Dimensional Graph
+Clinet side javascript visualization of multi dimetional data using D3.js and TypeScript.

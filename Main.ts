@@ -1,7 +1,3 @@
-import {BudgetData} from "DataAccess/DataProvider"
-import {MockDataAccess} from "DataAccess/DataProvider"
-import { BudgetDataRequestParams} from "DataAccess/DataProvider"
-
 import * as SeriesBySegment from "SeriesBySegmentsGraph";
 import * as Data from "./TrilasData";
 

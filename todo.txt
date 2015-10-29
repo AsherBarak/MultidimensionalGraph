@@ -3,7 +3,7 @@
 * improve axis style
 * resize with container resize
 * host in a container that fits available size (with no explisit properties)
-* fix bug: when dragging a segment all transformations cahnge. when droping dragEnd resets translation to 0,0 and the group is offset by the bars translation (rep: drag chart then click bars)
+* support touch by selecting deag target on deag end rather than on mouse over
 
 feuture features:
 * support RTL

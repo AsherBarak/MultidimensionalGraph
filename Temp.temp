@@ -1,9 +1,0 @@
-/// <reference path="D3Painter.ts" />
-/// <reference path="DataAccess\DataProvider.ts" />
-// 4import {BudgetData} from "./DataAccess/DataProvider";
-// 4import {Painter} from "./D3Painter";
-
-//4import Painter =require("D3Painter");
-//4import BudgetData=require("DataAccess/DataProvider");
-
-<!--<script src="require.js" ></script>-->

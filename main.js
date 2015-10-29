@@ -251,4 +251,4 @@ define(["require", "exports", "SeriesBySegmentsGraph", "./TrilasData"], function
     })();
     Program.main();
 });
-//# sourceMappingURL=Main.js.map
+//# sourceMappingURL=main.js.map
