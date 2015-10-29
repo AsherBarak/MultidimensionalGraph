@@ -70,8 +70,6 @@ text.dragMarker {
         font-weight: bold;
     }
 
-
-
 .House {
     fill: #2B5478;
 }
@@ -128,7 +126,7 @@ text.dragMarker {
     stroke: #573508;
 }
 
-#budgetPlot {
+#plotArea{
     background-image: url("http://media.moddb.com/images/groups/1/10/9704/auto/game-of-thrones-a-song-of-ice-and-fire-sean-bean-tv-series-1920x1080-hd-wallpaper.jpg");
     /*background-image:url("http://media.moddb.com/images/groups/1/10/9704/auto/gameofthrones-tyrion.jpg");*/
     width: 800px;
